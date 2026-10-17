@@ -1451,47 +1451,53 @@
   <div class="toast-container" id="toastContainer"></div>
 
   <script>
-/* GitHub Pages transport adapter; UI and original application logic are untouched. */
+/* Phoenix GitHub Pages <-> Apps Script RPC adapter */
 (function(){
   'use strict';
-  const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxHsIbGKj6QRhBdMEVk_d3Hez81qe6PZ3VnlzjaEmQnvtwfEsuUqS2I9J3Z0cIEkth7/exec';
-  const transport = document.createElement('iframe');
-  transport.setAttribute('title','Backend connection');
-  transport.setAttribute('aria-hidden','true');
-  transport.style.cssText='position:absolute;width:0;height:0;border:0;visibility:hidden;pointer-events:none';
-  let seq=0, ready=false;
-  const pending = new Map();
-  const queued=[];
-  function dispatch(msg){
-    if(ready){transport.contentWindow.postMessage(msg,'*');}
-    else queued.push(msg);
+  const SCRIPT_URL='https://script.google.com/macros/s/AKfycbxHsIbGKj6QRhBdMEVk_d3Hez81qe6PZ3VnlzjaEmQnvtwfEsuUqS2I9J3Z0cIEkth7/exec';
+  const CHANNEL='phoenix-rpc';
+  const iframe=document.createElement('iframe');
+  iframe.title='Phoenix backend connection';
+  iframe.setAttribute('aria-hidden','true');
+  iframe.style.cssText='position:absolute;width:1px;height:1px;border:0;opacity:0;pointer-events:none';
+  let seq=0,ready=false,attempt=0,handshake=null;
+  const pending=new Map(),queue=[];
+  const errorText=e=>e&&e.message?e.message:String(e);
+  function fail(id,error){
+    const p=pending.get(id);if(!p)return;
+    pending.delete(id);clearTimeout(p.timer);
+    if(p.failure)p.failure(new Error(error),p.userObject);
+    else console.error('Phoenix RPC:',error);
   }
-  function flush(){ while(queued.length) transport.contentWindow.postMessage(queued.shift(),'*'); }
-  window.addEventListener('message', function(ev){
-    if(ev.source !== transport.contentWindow || !ev.data || ev.data.channel !== 'phoenix-rpc') return;
+  function send(msg){
+    if(!iframe.contentWindow)return false;
+    iframe.contentWindow.postMessage(msg,'*'); // GAS iframe origin may be script.googleusercontent.com
+    return true;
+  }
+  function flush(){while(ready&&queue.length)send(queue.shift());}
+  function markReady(){ready=true;clearInterval(handshake);handshake=null;flush();}
+  window.addEventListener('message',function(ev){
+    if(ev.source!==iframe.contentWindow||!ev.data||ev.data.channel!==CHANNEL)return;
+    if(ev.origin!=='https://script.google.com'&&!ev.origin.endsWith('.googleusercontent.com'))return;
     const msg=ev.data;
-    if(msg.type==='loaded' || msg.type==='ready') {ready=true;flush();return;}
-    const call=pending.get(msg.id);
-    if(!call)return;
-    pending.delete(msg.id);
-    if(msg.type==='success'){if(call.success)call.success(msg.value,call.userObject);}
-    else if(call.failure)call.failure(new Error(msg.message||'Backend error'),call.userObject);
-    else console.error('Phoenix backend:',msg.message);
+    if(msg.type==='loaded'||msg.type==='ready'){markReady();return;}
+    const p=pending.get(msg.id);if(!p)return;
+    pending.delete(msg.id);clearTimeout(p.timer);
+    if(msg.type==='success'){if(p.success)p.success(msg.value,p.userObject);}
+    else if(msg.type==='error'){if(p.failure)p.failure(new Error(msg.message||'Backend error'),p.userObject);else console.error('Phoenix RPC:',msg.message);}
   });
   function runner(success,failure,userObject){
-    return new Proxy({}, {get:function(target,key){
-      if(key==='withSuccessHandler') return function(fn){return runner(fn,failure,userObject);};
-      if(key==='withFailureHandler') return function(fn){return runner(success,fn,userObject);};
-      if(key==='withUserObject') return function(obj){return runner(success,failure,obj);};
-      if(key==='then')return undefined;
+    return new Proxy({}, {get:function(_,key){
+      if(key==='withSuccessHandler')return fn=>runner(fn,failure,userObject);
+      if(key==='withFailureHandler')return fn=>runner(success,fn,userObject);
+      if(key==='withUserObject')return obj=>runner(success,failure,obj);
+      if(key==='then'||typeof key==='symbol')return undefined;
       return function(...args){
-        if(!SCRIPT_URL.startsWith('https://script.google.com/macros/s/')){
-          const e=new Error('โปรดตั้งค่า SCRIPT_URL ใน index.html เป็นลิงก์ Apps Script /exec');
-          if(failure)failure(e,userObject);else console.error(e);return;
-        }
         const id=String(++seq);
-        pending.set(id,{success,failure,userObject});
-        dispatch({channel:'phoenix-rpc',type:'call',id,method:String(key),args});
+        const timer=setTimeout(()=>fail(id,'หมดเวลารอคำสั่ง '+String(key)+' จาก Apps Script (45 วินาที) โปรดตรวจสอบ Deploy และสิทธิ์เข้าถึง'),45000);
+        pending.set(id,{success,failure,userObject,timer});
+        const msg={channel:CHANNEL,type:'call',id,method:String(key),args};
+        if(ready)send(msg);else queue.push(msg);
       };
     }});
   }
@@ -1499,9 +1505,17 @@
   window.google.script=window.google.script||{};
   window.google.script.run=runner(null,null,null);
   function mount(){
-    if(!SCRIPT_URL.startsWith('https://script.google.com/macros/s/'))return;
-    document.body.appendChild(transport);
-    transport.src=SCRIPT_URL + (SCRIPT_URL.includes('?')?'&':'?')+'bridge=1';
+    if(!/^https:\/\/script\.google\.com\/macros\/s\/[^/]+\/exec(?:\?.*)?$/.test(SCRIPT_URL)){
+      console.error('Phoenix: SCRIPT_URL ไม่ใช่ลิงก์ Apps Script /exec');return;
+    }
+    document.body.appendChild(iframe);
+    iframe.src=SCRIPT_URL+(SCRIPT_URL.includes('?')?'&':'?')+'bridge=1';
+    handshake=setInterval(function(){
+      if(ready){clearInterval(handshake);return;}
+      attempt++;
+      send({channel:CHANNEL,type:'ping',id:'handshake-'+attempt});
+      if(attempt>=30){clearInterval(handshake);handshake=null;console.error('Phoenix: Bridge ไม่ตอบกลับภายใน 30 วินาที');}
+    },1000);
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',mount);
   else mount();

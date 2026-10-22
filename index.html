@@ -1477,6 +1477,7 @@
    if(msg.type==='loaded'){loaded=true;markReady();return;}
    if(msg.type==='ready'){markReady();return;}
    const p=pending.get(msg.id);if(!p)return;
+   if(msg.type==='received'){p.received=true;console.info('Phoenix Bridge: received',p.method,msg.id);return;}
    pending.delete(msg.id);clearTimeout(p.timer);
    if(msg.type==='success'){if(p.success)p.success(msg.value,p.userObject);}
    else if(msg.type==='error'){if(p.failure)p.failure(new Error(msg.message||'Apps Script error'),p.userObject);else console.error('Phoenix RPC:',msg.message);}
@@ -1488,8 +1489,8 @@
    if(key==='then'||typeof key==='symbol')return undefined;
    return function(...args){
      const id=String(++seq);
-     const timer=setTimeout(()=>fail(id,!ready?'ไม่สามารถเชื่อมต่อ Apps Script Bridge ได้ภายใน 45 วินาที: ตรวจสอบว่า URL /exec เปิดได้, Deployment อนุญาต Anyone และ Bridge.html อยู่ในโปรเจกต์เดียวกัน':'คำสั่ง '+String(key)+' ไม่ได้รับคำตอบจาก Apps Script ภายใน 45 วินาที: ตรวจสอบ Executions และสิทธิ์ Google Sheets'),45000);
-     pending.set(id,{success,failure,userObject,timer});
+     const timer=setTimeout(()=>{const p=pending.get(id);fail(id,!ready?'Bridge ไม่พร้อมใช้งาน: ตรวจสอบ URL /exec และ Deployment':!p||!p.received?'Bridge ยังไม่ได้ยืนยันการรับคำสั่ง '+String(key)+' — ตรวจสอบ postMessage/iframe และ Deploy Bridge.html รุ่นล่าสุด':'Bridge รับคำสั่ง '+String(key)+' แล้ว แต่ไม่มีผลลัพธ์ส่งกลับ — ตรวจสอบ success/failure callback, ข้อมูลที่ส่งกลับ และ Executions');},45000);
+     pending.set(id,{success,failure,userObject,timer,received:false,method:String(key)});
      const msg={channel:CHANNEL,type:'call',id,method:String(key),args};
      if(ready)send(msg);else queue.push(msg);
    };

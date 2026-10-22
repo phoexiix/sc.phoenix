@@ -1452,75 +1452,78 @@
   <div class="toast-container" id="toastContainer"></div>
 
   <script>
-/* Phoenix GitHub Pages <-> Apps Script RPC adapter (nested iframe safe) */
+/* Phoenix RPC v3 - direct reply to actual nested GAS Bridge window */
 (function(){
- 'use strict';
- const SCRIPT_URL='https://script.google.com/macros/s/AKfycbxHsIbGKj6QRhBdMEVk_d3Hez81qe6PZ3VnlzjaEmQnvtwfEsuUqS2I9J3Z0cIEkth7/exec';
- const CHANNEL='phoenix-rpc';
- const iframe=document.createElement('iframe');
- iframe.title='Phoenix backend connection';
- iframe.setAttribute('aria-hidden','true');
- iframe.style.cssText='position:absolute;width:1px;height:1px;border:0;opacity:0;pointer-events:none';
- let seq=0,port=null,ready=false,iframeLoaded=false,handshakeTimer=null;
- const pending=new Map(),queue=[];
- function fail(id,error){const p=pending.get(id);if(!p)return;pending.delete(id);clearTimeout(p.timer);if(typeof p.failure==='function')p.failure(new Error(error),p.userObject);else console.error('Phoenix RPC:',error);}
- function failAll(error){for(const id of Array.from(pending.keys()))fail(id,error);queue.length=0;}
- function transmit(msg){if(!ready||!port)return false;try{port.postMessage(msg);return true;}catch(e){ready=false;console.error('Phoenix port send failed',e);return false;}}
- function flush(){while(ready&&queue.length){if(!transmit(queue[0]))break;queue.shift();}}
- function onResponse(msg){
-   if(!msg||msg.channel!==CHANNEL)return;
-   if(msg.type==='ready'||msg.type==='loaded'||msg.type==='pong')return;
-   const p=pending.get(msg.id);if(!p)return;
-   if(msg.type==='received'){p.received=true;return;}
-   if(msg.type!=='success'&&msg.type!=='error')return;
-   pending.delete(msg.id);clearTimeout(p.timer);
-   if(msg.type==='success'){if(typeof p.success==='function')p.success(msg.value,p.userObject);}
-   else if(typeof p.failure==='function')p.failure(new Error(msg.message||'Apps Script error'),p.userObject);
-   else console.error('Phoenix RPC:',msg.message);
+'use strict';
+const SCRIPT_URL='https://script.google.com/macros/s/AKfycbxHsIbGKj6QRhBdMEVk_d3Hez81qe6PZ3VnlzjaEmQnvtwfEsuUqS2I9J3Z0cIEkth7/exec';
+const CHANNEL='phoenix-rpc',BRIDGE_ID='phoenix-bridge-v3';
+let bridgeWindow=null,bridgeOrigin='',ready=false,seq=0,iframeLoaded=false;
+const pending=new Map(),queue=[];
+const iframe=document.createElement('iframe');
+iframe.title='Phoenix connection';
+iframe.setAttribute('aria-hidden','true');
+iframe.style.cssText='position:absolute;width:1px;height:1px;border:0;opacity:0;pointer-events:none';
+function report(id,error){
+ const p=pending.get(id);if(!p)return;
+ pending.delete(id);clearTimeout(p.timer);
+ if(typeof p.failure==='function')p.failure(new Error(error),p.userObject);
+ else console.error('[Phoenix RPC]',error);
+}
+function send(msg){
+ if(!bridgeWindow)return false;
+ try{bridgeWindow.postMessage(Object.assign({channel:CHANNEL,bridgeId:BRIDGE_ID},msg),bridgeOrigin);return true;}
+ catch(e){console.error('[Phoenix RPC] send',e);ready=false;bridgeWindow=null;return false;}
+}
+function flush(){while(ready&&queue.length){if(!send(queue[0]))break;queue.shift();}}
+function receive(event){
+ const m=event.data;
+ if(!m||m.channel!==CHANNEL||m.bridgeId!==BRIDGE_ID)return;
+ const host=(function(){try{return new URL(event.origin).hostname;}catch(e){return '';}})();
+ if(host!=='script.google.com' && host!=='script.googleusercontent.com' && !host.endsWith('.googleusercontent.com'))return;
+ if(m.type==='hello'){
+  bridgeWindow=event.source;
+  bridgeOrigin=event.origin;
+  ready=true;
+  send({type:'ping',id:'handshake'});
+  flush();
+  return;
  }
- // The bridge runs inside a nested Google HTML Service iframe. The child
- // transfers a MessagePort to this top-level page, bypassing the outer iframe.
- window.addEventListener('message',function(ev){
-   const msg=ev.data;
-   if(!msg||msg.channel!==CHANNEL||msg.type!=='connect'||!ev.ports||!ev.ports[0])return;
-   let host='';try{host=new URL(ev.origin).hostname;}catch(e){}
-   if(host!=='script.google.com'&&host!=='script.googleusercontent.com'&&!host.endsWith('.googleusercontent.com'))return;
-   if(port)try{port.close();}catch(e){}
-   port=ev.ports[0];
-   port.onmessage=function(e){onResponse(e.data);};
-   port.onmessageerror=function(){console.error('Phoenix Bridge: MessagePort decode error');};
-   if(port.start)port.start();
-   ready=true;
-   if(handshakeTimer){clearTimeout(handshakeTimer);handshakeTimer=null;}
-   console.info('Phoenix Bridge: MessageChannel connected');
-   transmit({channel:CHANNEL,type:'ping',id:'port-handshake'});
-   flush();
- });
- function runner(success,failure,userObject){return new Proxy({}, {get:function(_,key){
-   if(key==='withSuccessHandler')return fn=>runner(fn,failure,userObject);
-   if(key==='withFailureHandler')return fn=>runner(success,fn,userObject);
-   if(key==='withUserObject')return obj=>runner(success,failure,obj);
-   if(key==='then'||typeof key==='symbol')return undefined;
-   return function(...args){
-     const id=String(++seq);
-     const timer=setTimeout(()=>{const p=pending.get(id);if(!p)return;fail(id,!ready?'Bridge ไม่พร้อมใช้งาน: ตรวจสอบ Web App /exec, สิทธิ์การเข้าถึง และ Bridge.html':!p.received?'Bridge เชื่อมต่อแล้ว แต่ไม่ได้รับคำสั่ง '+String(key)+' — ตรวจสอบ Console และ Deploy':'Bridge รับคำสั่ง '+String(key)+' แล้ว แต่ไม่มีผลลัพธ์ — ตรวจสอบ Apps Script Executions');},60000);
-     pending.set(id,{success,failure,userObject,timer,received:false,method:String(key)});
-     const msg={channel:CHANNEL,type:'call',id,method:String(key),args};
-     if(!transmit(msg))queue.push(msg);
-   };
- }});}
- window.google=window.google||{};
- window.google.script=window.google.script||{};
- window.google.script.run=runner(null,null,null);
- function mount(){
-   if(!/^https:\/\/script\.google\.com\/macros\/s\/[^/]+\/exec(?:\?.*)?$/.test(SCRIPT_URL)){failAll('SCRIPT_URL ไม่ถูกต้อง');return;}
-   iframe.addEventListener('load',()=>{iframeLoaded=true;});
-   iframe.addEventListener('error',()=>failAll('ไม่สามารถโหลด iframe ของ Apps Script ได้'));
-   document.body.appendChild(iframe);
-   iframe.src=SCRIPT_URL+(SCRIPT_URL.includes('?')?'&':'?')+'bridge=1';
-   handshakeTimer=setTimeout(function(){if(!ready)failAll('Apps Script Bridge ไม่ได้เชื่อมต่อผ่าน MessageChannel — '+(iframeLoaded?'ตรวจสอบว่า Bridge.html รุ่นใหม่ถูก Deploy แล้ว และอนุญาต Anyone':'ตรวจสอบ /exec และสิทธิ์เข้าถึง Web App'));},30000);
- }
- if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',mount);else mount();
+ if(!bridgeWindow||event.source!==bridgeWindow)return;
+ if(m.type==='ready')return;
+ const p=pending.get(m.id);if(!p)return;
+ if(m.type==='received'){p.received=true;return;}
+ if(m.type!=='success'&&m.type!=='error')return;
+ pending.delete(m.id);clearTimeout(p.timer);
+ if(m.type==='success'){if(typeof p.success==='function')p.success(m.value,p.userObject);}
+ else if(typeof p.failure==='function')p.failure(new Error(m.message||'Apps Script error'),p.userObject);
+ else console.error('[Phoenix RPC]',m.message);
+}
+window.addEventListener('message',receive);
+function runner(success,failure,userObject){return new Proxy({}, {get:function(_,key){
+ if(key==='withSuccessHandler')return function(fn){return runner(fn,failure,userObject);};
+ if(key==='withFailureHandler')return function(fn){return runner(success,fn,userObject);};
+ if(key==='withUserObject')return function(obj){return runner(success,failure,obj);};
+ if(key==='then'||typeof key==='symbol')return undefined;
+ return function(...args){
+  const id=String(++seq);
+  const timer=setTimeout(function(){
+   const p=pending.get(id);if(!p)return;
+   report(id,!ready?'Bridge ไม่ได้เริ่มเชื่อมต่อ: URL /exec หรือการ Deploy / สิทธิ์ Web App อาจมีปัญหา':!p.received?'Bridge ไม่ยืนยันคำสั่ง '+String(key)+' (ตรวจสอบ URL, Console และ Bridge ที่ Deploy)':'Bridge รับคำสั่งแล้วแต่ไม่มีผลลัพธ์ '+String(key)+' (ตรวจสอบ Apps Script Executions)');
+  },45000);
+  pending.set(id,{success,failure,userObject,received:false,timer});
+  const msg={type:'call',id,method:String(key),args};
+  if(!ready||!send(msg))queue.push(msg);
+ };
+}});}
+window.google=window.google||{};
+window.google.script=window.google.script||{};
+window.google.script.run=runner(null,null,null);
+function mount(){
+ iframe.addEventListener('load',function(){iframeLoaded=true;});
+ document.body.appendChild(iframe);
+ iframe.src=SCRIPT_URL+(SCRIPT_URL.includes('?')?'&':'?')+'bridge=1';
+}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',mount);else mount();
 })();
 </script>
 

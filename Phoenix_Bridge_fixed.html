@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="th"><head><meta charset="utf-8"><title>Phoenix Bridge</title></head><body>
+<script>
+(function(){
+ 'use strict';
+ const ORIGIN='https://phoexiix.github.io';
+ const CHANNEL='phoenix-rpc';
+ const ALLOWED=new Set(["deleteOrgData", "deletePositionsByOrganization", "getAllPositionsSummary", "getManagementSummary", "getOrgData", "getOrganizationProfile", "getPositionsByOrganization", "getRealtimeVersion", "saveOrgData", "saveOrganizationProfile", "savePositions", "saveReorderedData", "secApproveBudget", "secChangeMemberPersonal", "secChangeMemberPosition", "secDeleteBudgetSource", "secDeleteCentralBudget", "secDeleteEmergencyExpense", "secDeleteMember", "secDeleteTeam", "secGetBudgetConfig", "secGetBudgetOrganizationTree", "secGetBudgetSources", "secGetBudgetUnits", "secGetBudgets", "secGetCentralBudgets", "secGetDashboard", "secGetEmergencyExpenses", "secGetMemberDetail", "secGetMemberHistory", "secGetMembers", "secGetOrganizationOptions", "secGetPositionOptions", "secGetTeamDetail", "secGetTeams", "secGetTierHistory", "secInitSheets", "secPromoteMember", "secReorderMembers", "secSaveBudget", "secSaveBudgetConfig", "secSaveBudgetSource", "secSaveBudgetUnit", "secSaveCentralBudget", "secSaveEmergencyExpense", "secSaveMember", "secSaveTeam", "secTransferBudgetReserve", "testConnection"]);
+ let port=null;
+ function send(message){
+   try{if(port)port.postMessage(Object.assign({channel:CHANNEL},message));}
+   catch(err){console.error('Bridge send error:',err);}
+ }
+ function receive(m){
+   if(!m||m.channel!==CHANNEL)return;
+   if(m.type==='ping'){send({type:'pong',id:m.id});return;}
+   if(m.type!=='call'||typeof m.id!=='string'||typeof m.method!=='string'||!Array.isArray(m.args))return;
+   if(!ALLOWED.has(m.method)){send({type:'error',id:m.id,message:'Method not allowed: '+m.method});return;}
+   send({type:'received',id:m.id});
+   try{
+     const runner=google.script.run
+       .withSuccessHandler(function(value){send({type:'success',id:m.id,value:value});})
+       .withFailureHandler(function(err){send({type:'error',id:m.id,message:err&&err.message||String(err)});});
+     if(typeof runner[m.method]!=='function')throw new Error('ไม่พบฟังก์ชัน '+m.method+' ใน Apps Script');
+     runner[m.method].apply(runner,m.args);
+   }catch(err){send({type:'error',id:m.id,message:err&&err.message||String(err)});}
+ }
+ // Transfer a port directly to GitHub's top window. This works even if
+ // Google Apps Script wraps HTML Service in another sandboxed iframe.
+ function connect(){
+   try{
+     const ch=new MessageChannel();
+     port=ch.port1;
+     port.onmessage=function(event){receive(event.data);};
+     if(port.start)port.start();
+     window.top.postMessage({channel:CHANNEL,type:'connect'},ORIGIN,[ch.port2]);
+   }catch(err){console.error('Phoenix Bridge connection failed:',err);}
+ }
+ connect();
+})();
+</script></body></html>

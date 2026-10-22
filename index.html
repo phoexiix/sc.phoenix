@@ -1478,7 +1478,7 @@
   function flush(){while(ready&&queue.length)send(queue.shift());}
   function markReady(){ready=true;clearInterval(handshake);handshake=null;flush();}
   window.addEventListener('message',function(ev){
-    if(ev.source!==iframe.contentWindow||!ev.data||ev.data.channel!==CHANNEL)return;
+    if(!ev.data||ev.data.channel!==CHANNEL)return; // GAS HTML Service may post from a nested iframe
     if(ev.origin!=='https://script.google.com'&&!ev.origin.endsWith('.googleusercontent.com'))return;
     const msg=ev.data;
     if(msg.type==='loaded'||msg.type==='ready'){markReady();return;}
@@ -1495,7 +1495,7 @@
       if(key==='then'||typeof key==='symbol')return undefined;
       return function(...args){
         const id=String(++seq);
-        const timer=setTimeout(()=>fail(id,'หมดเวลารอคำสั่ง '+String(key)+' จาก Apps Script (90 วินาที) โปรดตรวจสอบ Deploy และสิทธิ์เข้าถึง'),90000);
+        const timer=setTimeout(()=>fail(id,'หมดเวลารอคำสั่ง '+String(key)+' จาก Apps Script (25 วินาที) โปรดตรวจสอบ Deploy และสิทธิ์เข้าถึง'),25000);
         pending.set(id,{success,failure,userObject,timer});
         const msg={channel:CHANNEL,type:'call',id,method:String(key),args};
         if(ready)send(msg);else queue.push(msg);
@@ -1510,12 +1510,13 @@
       console.error('Phoenix: SCRIPT_URL ไม่ใช่ลิงก์ Apps Script /exec');return;
     }
     document.body.appendChild(iframe);
+    iframe.addEventListener('error',function(){for(const id of pending.keys())fail(id,'ไม่สามารถเปิด Google Apps Script Bridge ได้');});
     iframe.src=SCRIPT_URL+(SCRIPT_URL.includes('?')?'&':'?')+'bridge=1';
     handshake=setInterval(function(){
       if(ready){clearInterval(handshake);return;}
       attempt++;
       send({channel:CHANNEL,type:'ping',id:'handshake-'+attempt});
-      if(attempt>=60){clearInterval(handshake);handshake=null;console.error('Phoenix: Bridge ไม่ตอบกลับภายใน 60 วินาที');for(const id of pending.keys())fail(id,'Bridge ไม่ตอบกลับ: ตรวจสอบการเผยแพร่ Apps Script และไฟล์ Bridge.html');}
+      if(attempt>=20){clearInterval(handshake);handshake=null;console.error('Phoenix: Bridge ไม่ตอบกลับภายใน 20 วินาที');for(const id of pending.keys())fail(id,'Bridge ไม่ตอบกลับ: ตรวจสอบการเผยแพร่ Apps Script และไฟล์ Bridge.html');}
     },1000);
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',mount);
@@ -3029,6 +3030,7 @@
     }
 
     function loadData() {
+      document.getElementById('chartLoading').innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> กำลังโหลดผังองค์กร...';
       document.getElementById('chartLoading').style.display = 'block';
       document.getElementById('orgChartWrapper').style.display = 'none';
       document.getElementById('loading').style.display = 'block';
@@ -3050,7 +3052,8 @@
           document.getElementById('orgTable').style.display = 'table';
         })
         .withFailureHandler(function(err) {
-          document.getElementById('chartLoading').style.display = 'none';
+          document.getElementById('chartLoading').style.display = 'block';
+          document.getElementById('chartLoading').textContent = 'โหลดผังองค์กรไม่สำเร็จ: ' + (err && err.message ? err.message : String(err));
           document.getElementById('orgChartWrapper').style.display = 'none';
           document.getElementById('loading').style.display = 'none';
           document.getElementById('orgTable').style.display = 'table';

@@ -1598,6 +1598,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
   <script>
     let allData = [];
     let returnScrollY = 0;
+    let orgFormReturnContext = null;
     let organizationProfile = null;
     let currentPositions = [];
     // Chart order: command levels 1–5; preserve Sheet/drag order within a level.
@@ -3303,6 +3304,14 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
     }
 
     function switchTab(tabName) {
+      const previousSection=document.querySelector('#organizationSystem .view-section.active');
+      if(tabName==='form' && previousSection && previousSection.id!=='form-section'){
+        const tabs={'chart-section':'chart','view-section':'view','positions-section':'positions','executive-admin-section':'executiveAdmin','personnel-section':'personnel'};
+        const chart=document.getElementById('orgChartWrapper');
+        orgFormReturnContext={tab:tabs[previousSection.id] || 'view',sectionId:previousSection.id,x:window.scrollX,y:window.scrollY,chartX:chart.scrollLeft,chartY:chart.scrollTop};
+      }else if(tabName!=='form' && previousSection?.id==='form-section'){
+        orgFormReturnContext=null;
+      }
       document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
       document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
       
@@ -4260,6 +4269,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
     }
 
     function cancelEdit() {
+      const destination=orgFormReturnContext || {tab:'view',sectionId:'view-section',x:0,y:returnScrollY,chartX:0,chartY:0};
       // ล้างข้อมูลในฟอร์มทั้งหมด
       document.getElementById('orgForm').reset();
       document.getElementById('ID').value = '';
@@ -4277,17 +4287,16 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
       handleLocationChange();
       renderPositionRows([]);
 
-      // กลับไปหน้าดูตารางข้อมูล โดยคงตัวกรอง/คำค้นเดิม
-      switchTab('view');
-      filterTable();
-
-      // กลับไปยังตำแหน่งเดิมที่ผู้ใช้กดแก้ไข
+      // Return to the page that opened the form, preserving its filters and pan.
+      switchTab(destination.tab);
       requestAnimationFrame(function() {
         requestAnimationFrame(function() {
-          window.scrollTo({
-            top: returnScrollY,
-            behavior: 'auto'
-          });
+          if(selectedSystem!=='organization' || document.querySelector('#organizationSystem .view-section.active')?.id!==destination.sectionId)return;
+          if(destination.tab==='chart'){
+            const chart=document.getElementById('orgChartWrapper');
+            chart.scrollLeft=destination.chartX;chart.scrollTop=destination.chartY;
+          }
+          window.scrollTo({left:destination.x,top:destination.y,behavior:'instant'});
         });
       });
     }

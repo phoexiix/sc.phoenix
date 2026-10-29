@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="th"><head><meta charset="utf-8"><title>Phoenix Bridge</title></head><body>
+<script>
+(function(){
+'use strict';
+const ORIGIN='https://phoexiix.github.io';
+const CHANNEL='phoenix-rpc';
+const ALLOWED=new Set(["deleteOrgData", "deletePersonnel", "deletePositionsByOrganization", "getAllPositionsSummary", "getManagementSummary", "getOrgData", "getOrganizationProfile", "getPersonnelDirectory", "getPositionsByOrganization", "getRealtimeVersion", "saveOrgData", "saveOrganizationProfile", "savePersonnel", "savePositions", "saveReorderedData", "secApproveBudget", "secChangeMemberPersonal", "secChangeMemberPosition", "secDeleteBudgetSource", "secDeleteCentralBudget", "secDeleteEmergencyExpense", "secDeleteMember", "secDeleteTeam", "secGetBudgetConfig", "secGetBudgetOrganizationTree", "secGetBudgetSources", "secGetBudgetUnits", "secGetBudgets", "secGetCentralBudgets", "secGetDashboard", "secGetEmergencyExpenses", "secGetMemberDetail", "secGetMemberHistory", "secGetMembers", "secGetOrganizationOptions", "secGetPositionOptions", "secGetTeamDetail", "secGetTeams", "secGetTierHistory", "secInitSheets", "secPromoteMember", "secReorderMembers", "secSaveBudget", "secSaveBudgetConfig", "secSaveBudgetSource", "secSaveBudgetUnit", "secSaveCentralBudget", "secSaveEmergencyExpense", "secSaveMember", "secSaveTeam", "secTransferBudgetReserve", "testConnection"]);
+const bridgeId='phoenix-bridge-v3';
+let connected=false;
+function send(obj){
+ try{window.top.postMessage(Object.assign({channel:CHANNEL,bridgeId:bridgeId},obj),ORIGIN);}
+ catch(e){console.error('Phoenix Bridge send failed',e);}
+}
+function receive(event){
+ if(event.origin!==ORIGIN || event.source!==window.top)return;
+ const m=event.data;
+ if(!m||m.channel!==CHANNEL||m.bridgeId!==bridgeId)return;
+ if(m.type==='ping'){connected=true;send({type:'ready',id:m.id});return;}
+ if(m.type!=='call'||typeof m.id!=='string'||typeof m.method!=='string'||!Array.isArray(m.args))return;
+ if(!ALLOWED.has(m.method)){send({type:'error',id:m.id,message:'Method not allowed: '+m.method});return;}
+ send({type:'received',id:m.id});
+ try{
+  if(!window.google||!google.script||!google.script.run)throw Error('google.script.run ไม่พร้อม');
+  const runner=google.script.run.withSuccessHandler(function(value){send({type:'success',id:m.id,value:value});})
+   .withFailureHandler(function(error){send({type:'error',id:m.id,message:error&&error.message||String(error)});});
+  if(typeof runner[m.method]!=='function')throw Error('ไม่พบฟังก์ชัน '+m.method+' ใน Apps Script');
+  runner[m.method].apply(runner,m.args);
+ }catch(error){send({type:'error',id:m.id,message:error&&error.message||String(error)});}
+}
+window.addEventListener('message',receive);
+send({type:'hello'});
+let attempts=0;
+const announce=setInterval(function(){
+ if(connected || ++attempts>=60){clearInterval(announce);return;}
+ send({type:'hello'});
+},1000);
+})();
+</script></body></html>

@@ -999,6 +999,12 @@
       #secretariatSystem .sec-sidebar { top:auto; }
     }
 
+    .personnel-extra-position { display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.4fr) auto;gap:12px;align-items:start;padding:14px;margin-bottom:12px;border:1px solid var(--border-color);border-radius:10px; }
+    .personnel-extra-position .form-group { min-width:0; }
+    .personnel-extra-position label { display:flex;flex-direction:column;gap:6px; }
+    .personnel-extra-position > button { margin-top:24px; }
+    .personnel-assignment-summary + .personnel-assignment-summary { margin-top:12px;padding-top:10px;border-top:1px solid var(--border-color); }
+    @media(max-width:600px) { .personnel-extra-position { grid-template-columns:1fr; } .personnel-extra-position > button { margin-top:0;justify-self:start; } }
   </style>
     <div class="sec-shell">
       <header class="sec-header">
@@ -1179,6 +1185,7 @@
           <div class="form-group"><label for="personnelNickname">ชื่อเล่น</label><input type="text" id="personnelNickname" maxlength="100" placeholder="ชื่อเล่น (ถ้ามี)"></div>
           <div class="form-group"><label for="personnelOrganization">หน่วยงาน <span style="color:red">*</span></label><select id="personnelOrganization" required onchange="renderPersonnelPositionOptions()"><option value="">-- เลือกหน่วยงาน --</option></select></div>
           <div class="form-group full"><label for="personnelPosition">ตำแหน่ง <span style="color:red">*</span></label><select id="personnelPosition" required disabled onchange="renderPersonnelSelectedPosition()"><option value="">-- เลือกหน่วยงานก่อน --</option></select><div id="personnelSelectedPosition" aria-live="polite"></div></div>
+          <div class="form-group full"><div id="personnelAdditionalPositions"></div><button id="personnelAddPositionBtn" type="button" class="personnel-button" style="align-self:flex-start" onclick="addPersonnelPositionRow()" disabled>+ เพิ่มตำแหน่ง</button></div>
           <div class="form-group full"><label for="personnelNote">หมายเหตุ</label><textarea id="personnelNote" maxlength="2000" rows="2" placeholder="รายละเอียดเพิ่มเติม (ถ้ามี)"></textarea></div>
         </div>
         <div class="personnel-actions"><button id="personnelSaveBtn" type="submit" class="btn-submit" disabled><i class="fa-solid fa-plus"></i> เพิ่มบุคลากร</button><button id="personnelCancelBtn" type="button" class="personnel-button" onclick="resetPersonnelForm()" hidden>ยกเลิกการแก้ไข</button></div>
@@ -1639,7 +1646,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
     let personnelLoadPromise = null, personnelReloadPending = false, personnelBusy = false, personnelRevision = 0;
     let allPositionsDashboard = [], positionDashboardLoading = false;
     function personnelKey(p) { return JSON.stringify([String(p.OrganizationID || ''), String(p.PositionID || '')]); }
-    function personnelAtPosition(p) { return personnelDirectory.filter(person => personnelKey(person) === personnelKey(p)); }
+    function personnelAtPosition(p) { return personnelDirectory.filter(person => personnelHasPosition(person,p)); }
     function personnelSearchNames(p) { return personnelAtPosition(p).map(person => personnelDisplayName(person)).join(' '); }
     function positionPersonnelHtml(p) { return positionsPersonnelHtml([p], false); }
     function positionsPersonnelHtml(positions, showOrganization) {
@@ -1649,10 +1656,11 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
     }
     function personnelNamesHtml(keys, showOrganization) {
       if (!personnelLoaded) return '<span class="personnel-unassigned">กำลังโหลดรายชื่อบุคลากร...</span>';
-      const people = personnelDirectory.filter(p => keys.includes(personnelKey(p)));
+      const people = personnelDirectory.filter(person => personnelAssignments(person).some(p=>keys.includes(personnelKey(p))));
       return people.map(person => {
-        const pos = personnelPositions.find(p => personnelKey(p) === personnelKey(person));
-        const org = showOrganization && pos ? ' — '+(pos.OrganizationNameTH || pos.OrganizationNameEN || '') : '';
+        const matches=personnelPositions.filter(p=>keys.includes(personnelKey(p)) && personnelHasPosition(person,p));
+        const labels=[...new Set(matches.map(p=>p.OrganizationNameTH || p.OrganizationNameEN || '').filter(Boolean))];
+        const org=showOrganization && labels.length?' — '+labels.join(' / '):'';
         return '<span class="personnel-name"><i class="fa-solid fa-user" aria-hidden="true"></i> '+escapeHtml(personnelDisplayName(person)+org)+'</span>';
       }).join('') || '<span class="personnel-unassigned">ยังไม่มีผู้ดำรงตำแหน่ง</span>';
     }
@@ -1726,32 +1734,17 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
       select.disabled = personnelBusy || !positions.length;
       select.value = positions.some(p=>String(p.PositionID)===current) ? current : '';
       renderPersonnelSelectedPosition();
+      refreshAdditionalPersonnelPositions();
     }
     function renderPersonnelSelectedPosition() {
       const org = document.getElementById('personnelOrganization').value, id = document.getElementById('personnelPosition').value;
       const p = personnelPositions.find(p=>String(p.OrganizationID)===org && String(p.PositionID)===id);
       document.getElementById('personnelSelectedPosition').innerHTML = p ? positionPersonnelHtml(p) : '';
     }
-    function renderPersonnelDirectory() {
-      const query = document.getElementById('personnelSearch').value.trim().toLowerCase();
-      const body = document.getElementById('personnelTableBody');
-      const people = personnelDirectory.map(person=>({person,position:personnelPositions.find(p=>personnelKey(p)===personnelKey(person))})).filter(({person,position:p})=>!query || [person.Name,person.Nickname,person.Note,p?.PositionName,p?.OrganizationNameTH,p?.OrganizationNameEN].some(v=>String(v||'').toLowerCase().includes(query))).sort((a,b)=>a.person.Name.localeCompare(b.person.Name,'th'));
-      document.getElementById('personnelCount').textContent = people.length+' / '+personnelDirectory.length+' คน';
-      body.innerHTML = '';
-      if(!people.length) { body.innerHTML='<tr><td colspan="5" class="empty-cell">'+(personnelLoaded?(query?'ไม่พบรายชื่อที่ตรงกับคำค้น':'ยังไม่มีรายชื่อบุคลากร'):'กำลังโหลดรายชื่อ...')+'</td></tr>'; return; }
-      people.forEach(({person,position:p})=>{
-        const tr = document.createElement('tr');
-        tr.innerHTML='<td><strong>'+escapeHtml(person.Name)+'</strong>'+(person.Nickname?'<div class="personnel-hint" style="margin:3px 0 0">ชื่อเล่น: '+escapeHtml(person.Nickname)+'</div>':'')+'</td><td>'+escapeHtml(p?.PositionName || 'ตำแหน่งเดิมไม่มีในระบบแล้ว')+(p?positionPersonnelHtml(p):'')+'</td><td>'+escapeHtml(p?.OrganizationNameTH || p?.OrganizationNameEN || person.OrganizationID)+'</td><td>'+escapeHtml(person.Note || '-')+'</td><td class="personnel-row-actions"></td>';
-        const actions = tr.querySelector('.personnel-row-actions');
-        [['แก้ไข',()=>editPersonnel(person.PersonID),''],['ลบ',()=>deletePersonnelUI(person.PersonID),'danger']].forEach(([label,action,css])=>{
-          const button=document.createElement('button'); button.type='button'; button.className='personnel-button '+css; button.textContent=label; button.disabled=personnelBusy; button.addEventListener('click',action); actions.appendChild(button);
-        });
-        body.appendChild(tr);
-      });
-    }
     function resetPersonnelForm() {
       if(personnelBusy)return;
       document.getElementById('personnelForm').reset();
+      document.getElementById('personnelAdditionalPositions').innerHTML='';
       document.getElementById('personnelId').value='';
       document.getElementById('personnelFormTitle').textContent='เพิ่มบุคลากร';
       document.getElementById('personnelSaveBtn').textContent='เพิ่มบุคลากร';
@@ -1768,7 +1761,11 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
       document.getElementById('personnelFormTitle').textContent='แก้ไขบุคลากร';
       document.getElementById('personnelSaveBtn').textContent='บันทึกการแก้ไข';
       document.getElementById('personnelCancelBtn').hidden=false;
-      renderPersonnelOrganizationOptions(person.OrganizationID,person.PositionID);
+      const assignments=personnelAssignments(person);
+      const first=assignments[0] || {};
+      document.getElementById('personnelAdditionalPositions').innerHTML='';
+      renderPersonnelOrganizationOptions(first.OrganizationID || '',first.PositionID || '');
+      assignments.slice(1).forEach(assignment=>addPersonnelPositionRow(assignment));
       document.getElementById('personnelName').focus();
     }
     function setPersonnelBusy(busy) {
@@ -1792,6 +1789,8 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
       event.preventDefault(); if(personnelBusy)return;
       const form=document.getElementById('personnelForm'); if(!form.reportValidity())return;
       const data={PersonID:document.getElementById('personnelId').value,Name:document.getElementById('personnelName').value.trim(),Nickname:document.getElementById('personnelNickname').value.trim(),OrganizationID:document.getElementById('personnelOrganization').value,PositionID:document.getElementById('personnelPosition').value,Note:document.getElementById('personnelNote').value.trim()};
+      data.Assignments=collectPersonnelAssignments();
+      if(new Set(data.Assignments.map(personnelKey)).size!==data.Assignments.length){showToast('เลือกตำแหน่งซ้ำ กรุณาเลือกตำแหน่งที่แตกต่างกัน','error');return;}
       if(!data.Name || !data.PositionID || !data.OrganizationID) { showToast('กรุณากรอกชื่อและเลือกตำแหน่งจากระบบ','error');return; }
       setPersonnelBusy(true);
       document.getElementById('personnelFormStatus').textContent='กำลังบันทึก...';
@@ -2992,7 +2991,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
       secMemberPersonChanged(row,false);
     }
     function secMemberPersonChanged(row,userChanged=true) {
-      const person=personnelDirectory.find(p=>p.PersonID===row.querySelector('.member-person').value && String(p.PositionID)===row.dataset.positionId && String(p.OrganizationID)===row.dataset.positionOrgId);
+      const person=personnelDirectory.find(p=>p.PersonID===row.querySelector('.member-person').value && personnelHasPosition(p,{PositionID:row.dataset.positionId,OrganizationID:row.dataset.positionOrgId}));
       if(person){
         row.dataset.personId=person.PersonID;row.querySelector('.member-name').value=person.Name;row.querySelector('.member-nickname').value=person.Nickname||'';
         row.querySelector('.member-name').readOnly=true;row.querySelector('.member-nickname').readOnly=true;
@@ -3027,7 +3026,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
         const orgId=selectedPosition?String(selectedPosition.OrganizationID):(sub||root), org=secOrgOptions.find(x=>String(x.ID)===String(orgId));
         const name=row.querySelector('.member-name')?.value||'',role=row.querySelector('.member-role')?.value||'';
         if(!String(name).trim())return secNotify('กรุณาระบุชื่อสมาชิก');
-        if (row.dataset.personId && !personnelDirectory.some(p=>p.PersonID===row.dataset.personId && selectedPosition && personnelKey(p)===personnelKey(selectedPosition))) return secNotify('รายชื่อหรือตำแหน่งเปลี่ยนแล้ว กรุณาเลือกบุคลากรใหม่');
+        if (row.dataset.personId && !personnelDirectory.some(p=>p.PersonID===row.dataset.personId && selectedPosition && personnelHasPosition(p,selectedPosition))) return secNotify('รายชื่อหรือตำแหน่งเปลี่ยนแล้ว กรุณาเลือกบุคลากรใหม่');
         payloads.push({MemberID:editId,TeamID:teamId,PersonID:row.dataset.personId||'',PositionID:selectedPosition?selectedPosition.PositionID:'',Nickname:row.querySelector('.member-nickname').value.trim(),Rank:row.querySelector('.member-rank')?.value||'',Name:name,Organization:org?(org.NameTH||org.NameEN||''):'',OrganizationID:orgId||'',OrganizationParentID:org?String(org.ParentID||''):'',Role:role,Tier:row.querySelector('.member-tier')?.value||'1',Status:row.querySelector('.member-status')?.value||'ปฏิบัติงาน',IndividualCapability:row.querySelector('.member-capability')?.value||''});
       }
       const btn=document.getElementById('sec-member-save-btn');if(btn)btn.disabled=true;
@@ -5039,6 +5038,66 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
       window.addEventListener('resize',updateStickyHeaderHeight);
       requestAnimationFrame(updateStickyHeaderHeight);
     })();
+
+    function personnelAssignments(person) {
+      return Array.isArray(person.Assignments)?person.Assignments:(person.PositionID && person.OrganizationID?[{PositionID:person.PositionID,OrganizationID:person.OrganizationID}]:[]);
+    }
+    function personnelHasPosition(person,position) {
+      return personnelAssignments(person).some(p=>personnelKey(p)===personnelKey(position));
+    }
+    function personnelOrganizationEntries() {
+      const orgs=new Map();
+      personnelPositions.forEach(p=>orgs.set(String(p.OrganizationID),p.OrganizationNameTH||p.OrganizationNameEN||p.OrganizationID));
+      const entries=[],seen=new Set();
+      phoenixOrderOrganizationChoices_(personnelOrganizations.length?personnelOrganizations:allData).forEach(org=>{
+        const id=String(org.ID);if(orgs.has(id) && !seen.has(id)){entries.push([id,orgs.get(id)]);seen.add(id);}
+      });
+      orgs.forEach((name,id)=>{if(!seen.has(id))entries.push([id,name]);});return entries;
+    }
+    function refreshAdditionalPersonnelPositions() {
+      document.querySelectorAll('#personnelAdditionalPositions .personnel-extra-position').forEach(row=>{
+        const org=row.querySelector('.personnel-extra-org'),position=row.querySelector('.personnel-extra-role'),orgId=org.value,positionId=position.value;
+        org.innerHTML='<option value="">-- เลือกหน่วยงาน --</option>'+personnelOrganizationEntries().map(([id,name])=>'<option value="'+escapeHtml(id)+'">'+escapeHtml(name)+'</option>').join('');
+        org.value=orgId;populateAdditionalPersonnelPosition(row,positionId);
+      });
+      document.getElementById('personnelAddPositionBtn').disabled=personnelBusy || !personnelLoaded || !personnelPositions.length;
+    }
+    function populateAdditionalPersonnelPosition(row,preferredPosition) {
+      const org=row.querySelector('.personnel-extra-org'),select=row.querySelector('.personnel-extra-role'),previous=preferredPosition===undefined?select.value:String(preferredPosition);
+      const positions=personnelPositions.filter(p=>String(p.OrganizationID)===org.value);
+      select.innerHTML='<option value="">'+(org.value?'-- เลือกตำแหน่ง --':'-- เลือกหน่วยงานก่อน --')+'</option>'+positions.map(p=>'<option value="'+escapeHtml(p.PositionID)+'">'+escapeHtml(p.PositionName+' · '+p.LineOfWork+' · Tier '+p.Tier)+'</option>').join('');
+      select.value=positions.some(p=>String(p.PositionID)===previous)?previous:'';select.disabled=personnelBusy || !positions.length;
+      const selected=positions.find(p=>String(p.PositionID)===select.value);
+      row.querySelector('.personnel-extra-preview').innerHTML=selected?positionPersonnelHtml(selected):'';
+    }
+    function addPersonnelPositionRow(assignment) {
+      if(personnelBusy)return;
+      const row=document.createElement('div');row.className='personnel-extra-position';
+      row.innerHTML='<div class="form-group"><label><span>หน่วยงาน <span style="color:red">*</span></span><select class="personnel-extra-org" required aria-label="หน่วยงานเพิ่มเติม"></select></label></div><div class="form-group"><label><span>ตำแหน่ง <span style="color:red">*</span></span><select class="personnel-extra-role" required aria-label="ตำแหน่งเพิ่มเติม"></select></label><div class="personnel-extra-preview"></div></div><button type="button" class="personnel-button danger" aria-label="ลบตำแหน่งเพิ่มเติม">ลบตำแหน่ง</button>';
+      document.getElementById('personnelAdditionalPositions').appendChild(row);
+      const org=row.querySelector('.personnel-extra-org');
+      org.innerHTML='<option value="">-- เลือกหน่วยงาน --</option>'+personnelOrganizationEntries().map(([id,name])=>'<option value="'+escapeHtml(id)+'">'+escapeHtml(name)+'</option>').join('');
+      org.value=assignment?String(assignment.OrganizationID||''):'';populateAdditionalPersonnelPosition(row,assignment?.PositionID || '');
+      org.addEventListener('change',()=>populateAdditionalPersonnelPosition(row));row.querySelector('.personnel-extra-role').addEventListener('change',()=>populateAdditionalPersonnelPosition(row));
+      row.querySelector('button').addEventListener('click',()=>row.remove());
+      if(!assignment)org.focus();
+    }
+    function collectPersonnelAssignments() {
+      return [{OrganizationID:document.getElementById('personnelOrganization').value,PositionID:document.getElementById('personnelPosition').value},...[...document.querySelectorAll('#personnelAdditionalPositions .personnel-extra-position')].map(row=>({OrganizationID:row.querySelector('.personnel-extra-org').value,PositionID:row.querySelector('.personnel-extra-role').value}))];
+    }
+    function renderPersonnelDirectory() {
+      const query=document.getElementById('personnelSearch').value.trim().toLowerCase(),body=document.getElementById('personnelTableBody');
+      const people=personnelDirectory.map(person=>({person,positions:personnelAssignments(person).map(a=>personnelPositions.find(p=>personnelKey(p)===personnelKey(a)) || a)})).filter(({person,positions})=>!query || [person.Name,person.Nickname,person.Note,...positions.flatMap(p=>[p.PositionName,p.OrganizationNameTH,p.OrganizationNameEN])].some(v=>String(v||'').toLowerCase().includes(query))).sort((a,b)=>a.person.Name.localeCompare(b.person.Name,'th'));
+      document.getElementById('personnelCount').textContent=people.length+' / '+personnelDirectory.length+' คน';body.innerHTML='';
+      if(!people.length){body.innerHTML='<tr><td colspan="5" class="empty-cell">'+(personnelLoaded?(query?'ไม่พบรายชื่อที่ตรงกับคำค้น':'ยังไม่มีรายชื่อบุคลากร'):'กำลังโหลดรายชื่อ...')+'</td></tr>';return;}
+      people.forEach(({person,positions})=>{
+        const row=document.createElement('tr');
+        row.innerHTML='<td><strong>'+escapeHtml(person.Name)+'</strong>'+(person.Nickname?'<div class="personnel-hint" style="margin:3px 0 0">ชื่อเล่น: '+escapeHtml(person.Nickname)+'</div>':'')+'</td><td>'+positions.map(p=>'<div class="personnel-assignment-summary">'+escapeHtml(p.PositionName || 'ตำแหน่งเดิมไม่มีในระบบแล้ว')+(positions.length>1?'<div class="personnel-hint" style="margin:3px 0">'+escapeHtml(p.OrganizationNameTH||p.OrganizationNameEN||p.OrganizationID)+'</div>':'')+(p.PositionName?positionPersonnelHtml(p):'')+'</div>').join('')+'</td><td>'+positions.map(p=>'<div class="personnel-assignment-summary">'+escapeHtml(p.OrganizationNameTH||p.OrganizationNameEN||p.OrganizationID||'-')+'</div>').join('')+'</td><td>'+escapeHtml(person.Note||'-')+'</td><td class="personnel-row-actions"></td>';
+        [['แก้ไข',()=>editPersonnel(person.PersonID),''],['ลบ',()=>deletePersonnelUI(person.PersonID),'danger']].forEach(([label,action,css])=>{
+          const button=document.createElement('button');button.type='button';button.className='personnel-button '+css;button.textContent=label;button.disabled=personnelBusy;button.addEventListener('click',action);row.querySelector('.personnel-row-actions').appendChild(button);
+        });body.appendChild(row);
+      });
+    }
 
   </script>
   </div>

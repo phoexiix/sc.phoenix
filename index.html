@@ -978,6 +978,8 @@
     body.dark-theme #personnelSearch { background:#0f172a; border-color:#475569; color:#e2e8f0; }
     @media(max-width:600px) { .personnel-form { padding:14px; } .personnel-form .form-grid { grid-template-columns:1fr; } #personnel-section { padding:18px 14px; } }
 
+    #sec-member-modal .member-position,#sec-member-modal .member-person { min-width:0;max-width:100%; }
+    @media(max-width:560px) { #sec-member-modal .sec-member-name-field { grid-column:1/-1; } }
   </style>
     <div class="sec-shell">
       <header class="sec-header">
@@ -1059,7 +1061,7 @@
       <div class="sec-form-actions"><button class="sec-btn" onclick="secCloseModal('sec-team-modal')">ยกเลิก</button><button type="button" id="sec-team-save-btn" class="sec-btn primary" onclick="secSaveTeam(event)">บันทึก</button></div></div></div>
     <div id="sec-member-modal" class="sec-modal"><div class="sec-modal-box sec-member-entry-box"><div class="sec-modal-head"><div><h3 id="sec-member-modal-title">เพิ่มสมาชิกทีม</h3><small id="sec-member-modal-subtitle">กรอกสมาชิกทีละคน และกด + เพิ่มช่องกรอก เมื่อมีมากกว่า 1 คน</small></div><button class="sec-close" onclick="secCloseModal('sec-member-modal')">✕</button></div><input type="hidden" id="sec-member-team"><input type="hidden" id="sec-member-edit-id"><div id="sec-member-rows" class="sec-member-entry-list"></div><div class="sec-form-actions sec-member-add-actions"><button type="button" class="sec-btn" onclick="secAddMemberRow()">+ เพิ่มช่องกรอกข้อมูล</button></div><div class="sec-form-actions"><button class="sec-btn" onclick="secCloseModal('sec-member-modal')">ยกเลิก</button><button type="button" id="sec-member-save-btn" class="sec-btn primary" onclick="secSaveMember(event)">บันทึกสมาชิก</button></div></div></div>
     <div id="sec-member-position-modal" class="sec-modal"><div class="sec-modal-box" style="max-width:820px"><div class="sec-modal-head"><div><h3 id="sec-member-detail-title">ข้อมูลสมาชิก</h3><small>ข้อมูลทั้งหมดและประวัติการเปลี่ยนแปลง</small></div><button class="sec-close" onclick="secCloseModal('sec-member-position-modal')">✕</button></div><input type="hidden" id="sec-position-member-id"><div id="sec-member-detail-body"></div><div class="sec-form-actions"><button type="button" class="sec-btn" onclick="secCloseModal('sec-member-position-modal')">ปิด</button><button type="button" class="sec-btn primary" id="sec-personal-edit-btn" onclick="secOpenPersonalEditFromDetail()">จัดการข้อมูลส่วนบุคคล</button></div></div></div>
-    <div id="sec-personal-modal" class="sec-modal"><div class="sec-modal-box sec-member-entry-box"><div class="sec-modal-head"><div><h3>จัดการข้อมูลส่วนบุคคล</h3><small>การเปลี่ยนแปลงจะถูกบันทึกเป็นประวัติ</small></div><button class="sec-close" onclick="secCloseModal('sec-personal-modal')">✕</button></div><input type="hidden" id="sec-personal-member-id"><div class="sec-form-grid"><div class="sec-field"><label>ยศ</label><input id="sec-personal-rank"></div><div class="sec-field"><label>ชื่อ-นามสกุล</label><input id="sec-personal-name"></div><div class="sec-field"><label>Tier</label><select id="sec-personal-tier"><option value="0">Tier 0 — บัญชาการสูงสุด</option><option value="1">Tier 1 — เจ้าหน้าที่ปฏิบัติการระดับสูง</option><option value="2">Tier 2 — เจ้าหน้าที่ปฏิบัติการชำนาญการพิเศษ</option><option value="3">Tier 3 — เจ้าหน้าที่ปฏิบัติการผู้เชี่ยวชาญ</option><option value="4">Tier 4 — เจ้าหน้าที่ปฏิบัติการภาคสนาม</option><option value="5">Tier 5 — เจ้าหน้าที่ภาคสนามระดับต้น</option><option value="6">Tier 6 — เจ้าหน้าที่สนับสนุนเทคนิคภาคสนาม</option><option value="7">Tier 7 — เจ้าหน้าที่ทดลองปฏิบัติการ</option><option value="8">Tier 8 — เจ้าหน้าที่ฝึกหัดทั่วไป</option></select></div><div class="sec-field full sec-member-combo"><label>หน่วยงานหลัก / พิเศษ</label><input id="sec-personal-org-root" list="sec-personal-org-root-list" autocomplete="off"><datalist id="sec-personal-org-root-list"></datalist></div><div class="sec-field full sec-member-combo"><label>หน่วยงานย่อย</label><input id="sec-personal-org-sub" list="sec-personal-org-sub-list" autocomplete="off"><datalist id="sec-personal-org-sub-list"></datalist></div><div class="sec-field full sec-member-combo"><label>ตำแหน่ง</label><input id="sec-personal-role" list="sec-personal-role-list" autocomplete="off" placeholder="เลือกจากรายการหรือพิมพ์ตำแหน่งใหม่"><datalist id="sec-personal-role-list"></datalist></div><div class="sec-field full"><label>ความสามารถรายบุคคล</label><textarea id="sec-personal-capability" rows="4" placeholder="ระบุความสามารถ ความเชี่ยวชาญ หรือทักษะเฉพาะบุคคล"></textarea></div><div class="sec-field"><label>สถานะ</label><select id="sec-personal-status"><option>ปฏิบัติงาน</option><option>พักงาน</option><option>พ้นสังกัด</option></select></div><div class="sec-field full"><div id="sec-personal-org-path" class="sec-org-path">ยังไม่ได้เลือกสังกัด</div></div><input type="hidden" id="sec-personal-org"><input type="hidden" id="sec-personal-org-id"><input type="hidden" id="sec-personal-org-parent-id"></div><div class="sec-form-actions"><button class="sec-btn" onclick="secCloseModal('sec-personal-modal')">ยกเลิก</button><button type="button" class="sec-btn primary" id="sec-personal-save-btn" onclick="secSavePersonalData()">บันทึกข้อมูล</button></div></div></div>
+    <div id="sec-personal-modal" class="sec-modal"><div class="sec-modal-box sec-member-entry-box"><div class="sec-modal-head"><div><h3>จัดการข้อมูลส่วนบุคคล</h3><small>การเปลี่ยนแปลงจะถูกบันทึกเป็นประวัติ</small></div><button class="sec-close" onclick="secCloseModal('sec-personal-modal')">✕</button></div><input type="hidden" id="sec-personal-member-id"><div class="sec-form-grid"><div class="sec-field"><label>ยศ</label><input id="sec-personal-rank"></div><div class="sec-field"><label>ชื่อ-นามสกุล</label><input id="sec-personal-name"></div><div class="sec-field"><label>ชื่อเล่น</label><input id="sec-personal-nickname" maxlength="100"></div><div class="sec-field"><label>Tier</label><select id="sec-personal-tier"><option value="0">Tier 0 — บัญชาการสูงสุด</option><option value="1">Tier 1 — เจ้าหน้าที่ปฏิบัติการระดับสูง</option><option value="2">Tier 2 — เจ้าหน้าที่ปฏิบัติการชำนาญการพิเศษ</option><option value="3">Tier 3 — เจ้าหน้าที่ปฏิบัติการผู้เชี่ยวชาญ</option><option value="4">Tier 4 — เจ้าหน้าที่ปฏิบัติการภาคสนาม</option><option value="5">Tier 5 — เจ้าหน้าที่ภาคสนามระดับต้น</option><option value="6">Tier 6 — เจ้าหน้าที่สนับสนุนเทคนิคภาคสนาม</option><option value="7">Tier 7 — เจ้าหน้าที่ทดลองปฏิบัติการ</option><option value="8">Tier 8 — เจ้าหน้าที่ฝึกหัดทั่วไป</option></select></div><div class="sec-field full sec-member-combo"><label>หน่วยงานหลัก / พิเศษ</label><input id="sec-personal-org-root" list="sec-personal-org-root-list" autocomplete="off"><datalist id="sec-personal-org-root-list"></datalist></div><div class="sec-field full sec-member-combo"><label>หน่วยงานย่อย</label><input id="sec-personal-org-sub" list="sec-personal-org-sub-list" autocomplete="off"><datalist id="sec-personal-org-sub-list"></datalist></div><div class="sec-field full sec-member-combo"><label>ตำแหน่ง</label><input id="sec-personal-role" list="sec-personal-role-list" autocomplete="off" placeholder="เลือกจากรายการหรือพิมพ์ตำแหน่งใหม่"><datalist id="sec-personal-role-list"></datalist></div><div class="sec-field full"><label>ความสามารถรายบุคคล</label><textarea id="sec-personal-capability" rows="4" placeholder="ระบุความสามารถ ความเชี่ยวชาญ หรือทักษะเฉพาะบุคคล"></textarea></div><div class="sec-field"><label>สถานะ</label><select id="sec-personal-status"><option>ปฏิบัติงาน</option><option>พักงาน</option><option>พ้นสังกัด</option></select></div><div class="sec-field full"><div id="sec-personal-org-path" class="sec-org-path">ยังไม่ได้เลือกสังกัด</div></div><input type="hidden" id="sec-personal-org"><input type="hidden" id="sec-personal-org-id"><input type="hidden" id="sec-personal-org-parent-id"></div><div class="sec-form-actions"><button class="sec-btn" onclick="secCloseModal('sec-personal-modal')">ยกเลิก</button><button type="button" class="sec-btn primary" id="sec-personal-save-btn" onclick="secSavePersonalData()">บันทึกข้อมูล</button></div></div></div>
     <div id="sec-detail-modal" class="sec-modal"><div class="sec-modal-box"><div class="sec-modal-head"><h3 id="sec-detail-title">รายละเอียด</h3><button class="sec-close" onclick="secCloseModal('sec-detail-modal')">✕</button></div><div id="sec-detail-body"></div></div></div>
   </section>
 
@@ -1155,6 +1157,7 @@
         <input type="hidden" id="personnelId">
         <div class="form-grid">
           <div class="form-group"><label for="personnelName">ชื่อ–นามสกุล <span style="color:red">*</span></label><input type="text" id="personnelName" required maxlength="200" autocomplete="name" placeholder="กรอกชื่อ–นามสกุล"></div>
+          <div class="form-group"><label for="personnelNickname">ชื่อเล่น</label><input type="text" id="personnelNickname" maxlength="100" placeholder="ชื่อเล่น (ถ้ามี)"></div>
           <div class="form-group"><label for="personnelOrganization">หน่วยงาน <span style="color:red">*</span></label><select id="personnelOrganization" required onchange="renderPersonnelPositionOptions()"><option value="">-- เลือกหน่วยงาน --</option></select></div>
           <div class="form-group full"><label for="personnelPosition">ตำแหน่ง <span style="color:red">*</span></label><select id="personnelPosition" required disabled onchange="renderPersonnelSelectedPosition()"><option value="">-- เลือกหน่วยงานก่อน --</option></select><div id="personnelSelectedPosition" aria-live="polite"></div></div>
           <div class="form-group full"><label for="personnelNote">หมายเหตุ</label><textarea id="personnelNote" maxlength="2000" rows="2" placeholder="รายละเอียดเพิ่มเติม (ถ้ามี)"></textarea></div>
@@ -1162,7 +1165,7 @@
         <div class="personnel-actions"><button id="personnelSaveBtn" type="submit" class="btn-submit" disabled><i class="fa-solid fa-plus"></i> เพิ่มบุคลากร</button><button id="personnelCancelBtn" type="button" class="personnel-button" onclick="resetPersonnelForm()" hidden>ยกเลิกการแก้ไข</button></div>
         <p id="personnelFormStatus" role="status" class="personnel-hint"></p>
       </form>
-      <div class="toolbar"><div class="search-box"><i class="fa-solid fa-magnifying-glass"></i><input id="personnelSearch" type="search" placeholder="ค้นหาชื่อ ตำแหน่ง หรือหน่วยงาน" oninput="renderPersonnelDirectory()" aria-label="ค้นหาบุคลากร"></div><button class="personnel-button" id="personnelReloadBtn" type="button" onclick="loadPersonnelDirectory(true)">โหลดรายการใหม่</button><span id="personnelCount" aria-live="polite"></span></div>
+      <div class="toolbar"><div class="search-box"><i class="fa-solid fa-magnifying-glass"></i><input id="personnelSearch" type="search" placeholder="ค้นหาชื่อ ชื่อเล่น ตำแหน่ง หรือหน่วยงาน" oninput="renderPersonnelDirectory()" aria-label="ค้นหาบุคลากร"></div><button class="personnel-button" id="personnelReloadBtn" type="button" onclick="loadPersonnelDirectory(true)">โหลดรายการใหม่</button><span id="personnelCount" aria-live="polite"></span></div>
       <p id="personnelLoadStatus" role="status" class="personnel-hint"></p>
       <div class="position-dashboard-table-wrap"><table class="position-dashboard-table"><thead><tr><th>ชื่อ–นามสกุล</th><th>ตำแหน่ง / ผู้ดำรงตำแหน่ง</th><th>หน่วยงาน</th><th>หมายเหตุ</th><th>จัดการ</th></tr></thead><tbody id="personnelTableBody"></tbody></table></div>
     </section>
@@ -1584,7 +1587,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
     let allPositionsDashboard = [], positionDashboardLoading = false;
     function personnelKey(p) { return JSON.stringify([String(p.OrganizationID || ''), String(p.PositionID || '')]); }
     function personnelAtPosition(p) { return personnelDirectory.filter(person => personnelKey(person) === personnelKey(p)); }
-    function personnelSearchNames(p) { return personnelAtPosition(p).map(person => person.Name).join(' '); }
+    function personnelSearchNames(p) { return personnelAtPosition(p).map(person => personnelDisplayName(person)).join(' '); }
     function positionPersonnelHtml(p) { return positionsPersonnelHtml([p], false); }
     function positionsPersonnelHtml(positions, showOrganization) {
       const keys = positions.filter(p => p.PositionID && p.OrganizationID).map(personnelKey);
@@ -1597,7 +1600,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
       return people.map(person => {
         const pos = personnelPositions.find(p => personnelKey(p) === personnelKey(person));
         const org = showOrganization && pos ? ' — '+(pos.OrganizationNameTH || pos.OrganizationNameEN || '') : '';
-        return '<span class="personnel-name"><i class="fa-solid fa-user" aria-hidden="true"></i> '+escapeHtml(person.Name+org)+'</span>';
+        return '<span class="personnel-name"><i class="fa-solid fa-user" aria-hidden="true"></i> '+escapeHtml(personnelDisplayName(person)+org)+'</span>';
       }).join('') || '<span class="personnel-unassigned">ยังไม่มีผู้ดำรงตำแหน่ง</span>';
     }
     function refreshPersonnelLabels() {
@@ -1626,6 +1629,8 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
         personnelDirectory = Array.isArray(data.personnel) ? data.personnel : [];
         personnelPositions = Array.isArray(data.positions) ? data.positions : [];
         personnelLoaded = true;
+        secPositions = personnelPositions.slice();
+        secRefreshPersonnelPickers();
         status.textContent = '';
         renderPersonnelOrganizationOptions();
         renderPersonnelDirectory();
@@ -1669,13 +1674,13 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
     function renderPersonnelDirectory() {
       const query = document.getElementById('personnelSearch').value.trim().toLowerCase();
       const body = document.getElementById('personnelTableBody');
-      const people = personnelDirectory.map(person=>({person,position:personnelPositions.find(p=>personnelKey(p)===personnelKey(person))})).filter(({person,position:p})=>!query || [person.Name,person.Note,p?.PositionName,p?.OrganizationNameTH,p?.OrganizationNameEN].some(v=>String(v||'').toLowerCase().includes(query))).sort((a,b)=>a.person.Name.localeCompare(b.person.Name,'th'));
+      const people = personnelDirectory.map(person=>({person,position:personnelPositions.find(p=>personnelKey(p)===personnelKey(person))})).filter(({person,position:p})=>!query || [person.Name,person.Nickname,person.Note,p?.PositionName,p?.OrganizationNameTH,p?.OrganizationNameEN].some(v=>String(v||'').toLowerCase().includes(query))).sort((a,b)=>a.person.Name.localeCompare(b.person.Name,'th'));
       document.getElementById('personnelCount').textContent = people.length+' / '+personnelDirectory.length+' คน';
       body.innerHTML = '';
       if(!people.length) { body.innerHTML='<tr><td colspan="5" class="empty-cell">'+(personnelLoaded?(query?'ไม่พบรายชื่อที่ตรงกับคำค้น':'ยังไม่มีรายชื่อบุคลากร'):'กำลังโหลดรายชื่อ...')+'</td></tr>'; return; }
       people.forEach(({person,position:p})=>{
         const tr = document.createElement('tr');
-        tr.innerHTML='<td><strong>'+escapeHtml(person.Name)+'</strong></td><td>'+escapeHtml(p?.PositionName || 'ตำแหน่งเดิมไม่มีในระบบแล้ว')+(p?positionPersonnelHtml(p):'')+'</td><td>'+escapeHtml(p?.OrganizationNameTH || p?.OrganizationNameEN || person.OrganizationID)+'</td><td>'+escapeHtml(person.Note || '-')+'</td><td class="personnel-row-actions"></td>';
+        tr.innerHTML='<td><strong>'+escapeHtml(person.Name)+'</strong>'+(person.Nickname?'<div class="personnel-hint" style="margin:3px 0 0">ชื่อเล่น: '+escapeHtml(person.Nickname)+'</div>':'')+'</td><td>'+escapeHtml(p?.PositionName || 'ตำแหน่งเดิมไม่มีในระบบแล้ว')+(p?positionPersonnelHtml(p):'')+'</td><td>'+escapeHtml(p?.OrganizationNameTH || p?.OrganizationNameEN || person.OrganizationID)+'</td><td>'+escapeHtml(person.Note || '-')+'</td><td class="personnel-row-actions"></td>';
         const actions = tr.querySelector('.personnel-row-actions');
         [['แก้ไข',()=>editPersonnel(person.PersonID),''],['ลบ',()=>deletePersonnelUI(person.PersonID),'danger']].forEach(([label,action,css])=>{
           const button=document.createElement('button'); button.type='button'; button.className='personnel-button '+css; button.textContent=label; button.disabled=personnelBusy; button.addEventListener('click',action); actions.appendChild(button);
@@ -1697,6 +1702,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
       const person = personnelDirectory.find(p=>p.PersonID===id); if(!person)return;
       document.getElementById('personnelId').value=person.PersonID;
       document.getElementById('personnelName').value=person.Name;
+      document.getElementById('personnelNickname').value=person.Nickname || '';
       document.getElementById('personnelNote').value=person.Note || '';
       document.getElementById('personnelFormTitle').textContent='แก้ไขบุคลากร';
       document.getElementById('personnelSaveBtn').textContent='บันทึกการแก้ไข';
@@ -1723,7 +1729,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
     function savePersonnelForm(event) {
       event.preventDefault(); if(personnelBusy)return;
       const form=document.getElementById('personnelForm'); if(!form.reportValidity())return;
-      const data={PersonID:document.getElementById('personnelId').value,Name:document.getElementById('personnelName').value.trim(),OrganizationID:document.getElementById('personnelOrganization').value,PositionID:document.getElementById('personnelPosition').value,Note:document.getElementById('personnelNote').value.trim()};
+      const data={PersonID:document.getElementById('personnelId').value,Name:document.getElementById('personnelName').value.trim(),Nickname:document.getElementById('personnelNickname').value.trim(),OrganizationID:document.getElementById('personnelOrganization').value,PositionID:document.getElementById('personnelPosition').value,Note:document.getElementById('personnelNote').value.trim()};
       if(!data.Name || !data.PositionID || !data.OrganizationID) { showToast('กรุณากรอกชื่อและเลือกตำแหน่งจากระบบ','error');return; }
       setPersonnelBusy(true);
       document.getElementById('personnelFormStatus').textContent='กำลังบันทึก...';
@@ -1889,7 +1895,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
     function secRenderAllMembersPage(){
       const box=document.getElementById('sec-all-members-view'); if(!box)return;
       const members=[...secMembers].sort((a,b)=>String(a.Name||'').localeCompare(String(b.Name||''),'th'));
-      const cards=members.map(m=>{const team=secTeams.find(t=>String(t.TeamID)===String(m.TeamID));return `<article class="sec-member" onclick="secOpenMemberDetail('${secEsc(m.MemberID)}')"><div class="sec-member-top"><div class="sec-avatar">${secEsc((m.Name||'?').charAt(0))}</div><span class="sec-badge">${secTierLabel(m.Tier)}</span></div><h3>${secEsc(m.Rank?m.Rank+' '+m.Name:m.Name||'-')}</h3><small>${secEsc(m.Role||'ไม่ระบุตำแหน่ง')}</small><p class="sec-muted"><b>ทีม:</b> ${secEsc(team?team.Name:'ไม่สังกัดทีม')}</p><p class="sec-muted"><b>หน่วยงาน:</b> ${secEsc(m.Organization||'ไม่ระบุหน่วยงาน')}</p><p class="sec-muted"><b>สถานะ:</b> ${secEsc(m.Status||'-')}</p><div style="display:flex;gap:8px;margin-top:12px;justify-content:flex-end"><button type="button" class="sec-btn" onclick="event.stopPropagation();secOpenMemberModal('${secEsc(m.MemberID)}','${secEsc(m.TeamID||'')}')">แก้ไข</button><button type="button" class="sec-btn sec-team-danger" onclick="event.stopPropagation();secDeleteMember('${secEsc(m.MemberID)}')">ลบสมาชิก</button></div></article>`;}).join('');
+      const cards=members.map(m=>{const team=secTeams.find(t=>String(t.TeamID)===String(m.TeamID));return `<article class="sec-member" onclick="secOpenMemberDetail('${secEsc(m.MemberID)}')"><div class="sec-member-top"><div class="sec-avatar">${secEsc((m.Name||'?').charAt(0))}</div><span class="sec-badge">${secTierLabel(m.Tier)}</span></div><h3>${secEsc((m.Rank?m.Rank+' ':'')+secMemberDisplayName(m))}</h3><small>${secEsc(m.Role||'ไม่ระบุตำแหน่ง')}</small><p class="sec-muted"><b>ทีม:</b> ${secEsc(team?team.Name:'ไม่สังกัดทีม')}</p><p class="sec-muted"><b>หน่วยงาน:</b> ${secEsc(m.Organization||'ไม่ระบุหน่วยงาน')}</p><p class="sec-muted"><b>สถานะ:</b> ${secEsc(m.Status||'-')}</p><div style="display:flex;gap:8px;margin-top:12px;justify-content:flex-end"><button type="button" class="sec-btn" onclick="event.stopPropagation();secOpenMemberModal('${secEsc(m.MemberID)}','${secEsc(m.TeamID||'')}')">แก้ไข</button><button type="button" class="sec-btn sec-team-danger" onclick="event.stopPropagation();secDeleteMember('${secEsc(m.MemberID)}')">ลบสมาชิก</button></div></article>`;}).join('');
       box.innerHTML=`<div class="sec-team-detail-page"><div class="sec-team-detail-toolbar"><div><div class="left"><button class="sec-btn" type="button" onclick="secBackToTeamList()">← กลับทีมปฏิบัติการ</button><span class="sec-badge">สมาชิกทั้งหมด ${members.length} คน</span></div><h2>รายชื่อสมาชิกทั้งหมด</h2><p>จัดการและตรวจสอบสมาชิกทุกทีมจากหน้านี้</p></div><div class="right"><button class="sec-btn primary" type="button" onclick="secOpenMemberModal('','')">+ เพิ่มสมาชิก</button></div></div><div class="sec-member-grid">${cards||'<div class="sec-empty">ยังไม่มีสมาชิก</div>'}</div></div>`;
     }
     function secLoadBudgetPage(){
@@ -1946,6 +1952,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 
     function secErr(e){return (e&&e.message)?e.message:String(e||'เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุ');}
     function secInit(){
+      loadPersonnelDirectory(true);
       google.script.run
         .withFailureHandler(e=>secNotify('ไม่สามารถเตรียมฐานข้อมูลสำนักเลขา: '+secErr(e)))
         .withSuccessHandler(()=>secLoadAll())
@@ -2076,9 +2083,9 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
       const list=document.getElementById('sec-team-list-view'),detail=document.getElementById('sec-team-detail-view'),all=document.getElementById('sec-all-members-view');list.style.display='none';detail.style.display='block';if(all)all.style.display='none';const head=members[0];
       detail.innerHTML=`<div class="sec-team-detail-page"><div class="sec-team-detail-toolbar"><div><div class="left"><button class="sec-btn" onclick="secBackToTeamList()">← กลับทีมปฏิบัติการ</button><span class="sec-badge">${secEsc(t.Code||t.TeamID)}</span><span class="sec-badge">Tier ${secEsc(t.Tier||'-')}</span></div><h2>${secEsc(t.Name||'-')}</h2><p>${secEsc(t.Organization||'-')} · ${secEsc(t.Status||'-')}</p></div><div class="right" style="display:flex;gap:8px;flex-wrap:wrap"><button class="sec-btn" onclick="secOpenTeamModal('${t.TeamID}')">แก้ไขข้อมูลทีม</button><button class="sec-btn primary" onclick="secOpenAllMembersPage()">จัดการสมาชิก</button><button class="sec-btn sec-team-danger" onclick="secDeleteTeam('${t.TeamID}')">ลบทีม</button></div></div>
         ${t.Description?`<div class="sec-team-head-card"><strong>ภารกิจ / รายละเอียด</strong><div style="margin-top:6px;color:#475569;white-space:pre-wrap">${secEsc(t.Description)}</div></div>`:''}
-        <div class="sec-team-head-card"><strong>หัวหน้าทีม</strong><div style="margin-top:5px">${head?secEsc(head.Name):'ยังไม่ได้กำหนดหัวหน้าทีม'}</div>${head?`<small>${secEsc(head.Role||'-')} · ${secEsc(head.Organization||'-')}</small>`:''}</div>
+        <div class="sec-team-head-card"><strong>หัวหน้าทีม</strong><div style="margin-top:5px">${head?secEsc(secMemberDisplayName(head)):'ยังไม่ได้กำหนดหัวหน้าทีม'}</div>${head?`<small>${secEsc(head.Role||'-')} · ${secEsc(head.Organization||'-')}</small>`:''}</div>
         <div class="sec-detail-section-head"><div><h3>รายชื่อสมาชิกทีม (${members.length})</h3><p>ลากสมาชิกเพื่อเปลี่ยนลำดับได้ · คนที่ 1 คือหัวหน้าทีม</p></div><button type="button" class="sec-btn primary" onclick="secOpenMemberModal('', '${t.TeamID}')">+ เพิ่มสมาชิกทีม</button></div>
-        <div id="sec-team-member-sort-list" class="sec-detail-member-list">${members.map((m,i)=>`<article class="sec-detail-member-card" draggable="true" data-member-id="${secEsc(m.MemberID)}" onclick="secOpenMemberDetail('${m.MemberID}')" title="คลิกเพื่อดูข้อมูลและประวัติสมาชิก"><div class="top"><span class="sec-badge">${i===0?'หัวหน้าทีม':'สมาชิกคนที่ '+(i+1)}</span><span class="sec-badge">${secTierLabel(m.Tier)}</span></div><h4>${secEsc(m.Rank||'')} ${secEsc(m.Name||'-')}</h4><p><b>ตำแหน่ง:</b> ${secEsc(m.Role||'-')}</p><p><b>หน่วยงาน:</b> ${secEsc(m.Organization||'-')}</p><p><b>สถานะ:</b> ${secEsc(m.Status||'-')}</p></article>`).join('')||'<div class="sec-empty">ยังไม่มีสมาชิกในทีมนี้</div>'}</div></div>`;
+        <div id="sec-team-member-sort-list" class="sec-detail-member-list">${members.map((m,i)=>`<article class="sec-detail-member-card" draggable="true" data-member-id="${secEsc(m.MemberID)}" onclick="secOpenMemberDetail('${m.MemberID}')" title="คลิกเพื่อดูข้อมูลและประวัติสมาชิก"><div class="top"><span class="sec-badge">${i===0?'หัวหน้าทีม':'สมาชิกคนที่ '+(i+1)}</span><span class="sec-badge">${secTierLabel(m.Tier)}</span></div><h4>${secEsc(m.Rank||'')} ${secEsc(secMemberDisplayName(m))}</h4><p><b>ตำแหน่ง:</b> ${secEsc(m.Role||'-')}</p><p><b>หน่วยงาน:</b> ${secEsc(m.Organization||'-')}</p><p><b>สถานะ:</b> ${secEsc(m.Status||'-')}</p></article>`).join('')||'<div class="sec-empty">ยังไม่มีสมาชิกในทีมนี้</div>'}</div></div>`;
       secBindTeamMemberDrag(t.TeamID);
     }
     const SEC_TIER_DESC={
@@ -2103,7 +2110,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
       const title=document.getElementById('sec-member-detail-title');
       if(!modal||!body)return;
       if(idEl)idEl.value=m.MemberID||'';
-      if(title)title.textContent=(m.Rank?m.Rank+' ':'')+(m.Name||'ข้อมูลสมาชิก');
+      if(title)title.textContent=(m.Rank?m.Rank+' ':'')+secMemberDisplayName(m);
       const parent=secOrgOptions.find(x=>String(x.ID)===String(m.OrganizationParentID||''));
       const sub=secOrgOptions.find(x=>String(x.ID)===String(m.OrganizationID||''));
       const parentName=parent?(parent.NameTH||parent.NameEN||'-'):(m.OrganizationParentID||'-');
@@ -2111,6 +2118,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
       const fields=[
         ['ยศ',m.Rank||'-'],
         ['ชื่อ-นามสกุล',m.Name||'-'],
+        ['ชื่อเล่น',m.Nickname||'-'],
         ['รหัสสมาชิก (MemberID)',m.MemberID||'-'],
         ['หน่วยงานหลัก / แม่',parentName],
         ['หน่วยงานย่อย',subName],
@@ -2780,12 +2788,13 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
       if(!String(data.Name).trim())return secNotify('กรุณาระบุชื่อทีม');
       const btn=document.getElementById('sec-team-save-btn');if(btn)btn.disabled=true;
       secShowSaving(id?'กำลังบันทึกการแก้ไขทีม...':'กำลังบันทึกทีม...');
-      google.script.run.withSuccessHandler(function(){
+      google.script.run.withSuccessHandler(function(savedTeam){
         if(btn)btn.disabled=false;
         secCloseModal('sec-team-modal');
         google.script.run.withSuccessHandler(function(d){
           secTeams=Array.isArray(d)?d:secTeams;secRenderTeams();secRenderDashboard();
           secHideSaving();secSavingSuccess(id?'แก้ไขทีมเรียบร้อยแล้ว':'เพิ่มทีมเรียบร้อยแล้ว',700);
+          if(!id && savedTeam && savedTeam.TeamID){secOpenTeamDetail(savedTeam.TeamID);secOpenMemberModal('',savedTeam.TeamID);}
         }).withFailureHandler(function(e){secHideSaving();secNotify('บันทึกทีมสำเร็จ แต่โหลดข้อมูลทีมใหม่ไม่สำเร็จ: '+secErr(e));}).secGetTeams();
       }).withFailureHandler(function(e){if(btn)btn.disabled=false;secHideSaving();secNotify('บันทึกทีมไม่สำเร็จ: '+secErr(e));}).secSaveTeam(data);
     }
@@ -2799,7 +2808,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
     function secRenderTeamEditMembers(teamId){
       const box=document.getElementById('sec-team-edit-member-list');if(!box)return;
       const arr=secMembers.filter(m=>String(m.TeamID)===String(teamId)).sort((a,b)=>Number(a.MemberOrder||999999)-Number(b.MemberOrder||999999));
-      box.innerHTML=arr.length?arr.map((m,i)=>`<div class="sec-team-edit-member-row"><div><strong>${secEsc(m.Rank||'')} ${secEsc(m.Name||'-')}</strong><small>${i===0?'หัวหน้าทีม · ':''}${secEsc(m.Role||'-')} · ${secEsc(m.Status||'-')}</small></div><div class="actions"><button type="button" class="sec-btn" onclick="secOpenMemberModal('${secEsc(m.MemberID)}','${secEsc(teamId)}')">แก้ไข</button><button type="button" class="sec-btn sec-team-danger" onclick="secDeleteMember('${secEsc(m.MemberID)}')">ลบ</button></div></div>`).join(''):'<div class="sec-empty">ยังไม่มีสมาชิกในทีมนี้</div>';
+      box.innerHTML=arr.length?arr.map((m,i)=>`<div class="sec-team-edit-member-row"><div><strong>${secEsc(m.Rank||'')} ${secEsc(secMemberDisplayName(m))}</strong><small>${i===0?'หัวหน้าทีม · ':''}${secEsc(m.Role||'-')} · ${secEsc(m.Status||'-')}</small></div><div class="actions"><button type="button" class="sec-btn" onclick="secOpenMemberModal('${secEsc(m.MemberID)}','${secEsc(teamId)}')">แก้ไข</button><button type="button" class="sec-btn sec-team-danger" onclick="secDeleteMember('${secEsc(m.MemberID)}')">ลบ</button></div></div>`).join(''):'<div class="sec-empty">ยังไม่มีสมาชิกในทีมนี้</div>';
     }
 
     function secOpenMemberModal(memberId,teamId){
@@ -2810,6 +2819,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
       document.getElementById('sec-member-modal-title').textContent=m?'แก้ไขสมาชิกทีม':'เพิ่มสมาชิกทีม';
       document.getElementById('sec-member-modal-subtitle').textContent=m?'แก้ไขข้อมูลสมาชิก':'กรอกสมาชิกทีละคน และกด + เพิ่มช่องกรอก เมื่อมีมากกว่า 1 คน';
       rows.innerHTML='';secAddMemberRow(m||null);modal.classList.add('open');
+      loadPersonnelDirectory(true).then(()=>secRefreshPersonnelPickers());
     }
 
     function secMemberOrgHtml(rowId, m){
@@ -2823,35 +2833,103 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
       return `<div class="sec-field full"><label>หน่วยงานหลัก / พิเศษ <span style="font-weight:400;color:#94a3b8">(ไม่บังคับ)</span></label><select class="member-org-root" data-row="${rowId}"><option value="">-- ไม่เลือกก็ได้ --</option>${roots.map(x=>`<option value="${secEsc(x.ID)}" ${String(x.ID)===String(root)?'selected':''}>${secEsc(x.NameTH||x.NameEN||x.ID)}</option>`).join('')}</select></div><div class="sec-field full"><label>หน่วยงานย่อย <span style="font-weight:400;color:#94a3b8">(ไม่บังคับ)</span></label><select class="member-org-sub" data-row="${rowId}"><option value="">-- ไม่เลือกก็ได้ --</option>${(root?children:allChildren).map(x=>`<option value="${secEsc(x.ID)}" ${String(x.ID)===String(targetId)?'selected':''}>${secEsc(x.NameTH||x.NameEN||x.ID)}</option>`).join('')}</select></div>`;
     }
 
-    function secAddMemberRow(existing){
+    function personnelDisplayName(person) {
+      return String(person.Name || '') + (String(person.Nickname || '').trim() ? ' ('+String(person.Nickname).trim()+')' : '');
+    }
+    function secMemberDisplayName(member) { return personnelDisplayName(member) || '-'; }
+    function secRefreshPersonnelPickers() {
+      document.querySelectorAll('#sec-member-rows .sec-member-entry-row').forEach(row => secUpdateMemberRoleList(row));
+    }
+    function secAddMemberRow(existing) {
       const rows=document.getElementById('sec-member-rows');if(!rows)return;
+      const team=secGetMemberTeamContext(document.getElementById('sec-member-team').value);
+      const m=existing || {OrganizationID:team.OrganizationID || '',OrganizationParentID:team.OrganizationParentID || ''};
       const rowId='mr_'+Date.now()+'_'+Math.random().toString(36).slice(2,7);
-      const m=existing||{};const div=document.createElement('div');div.className='sec-member-entry-row';div.dataset.rowId=rowId;
-      div.innerHTML=`<div class="member-row-head"><span class="sec-member-row-no">สมาชิก</span>${existing?'<span class="sec-badge">แก้ไขข้อมูล</span>':'<button type="button" class="sec-btn sec-member-remove">ลบช่อง</button>'}</div><div class="sec-field"><label>ยศ</label><input class="member-rank sec-member-rank" value="${secEsc(m.Rank||'')}"></div><div class="sec-field sec-member-name-field"><label>ชื่อ-นามสกุล</label><input class="member-name" value="${secEsc(m.Name||'')}"></div><div class="sec-field"><label>Tier</label><select class="member-tier">${Array.from({length:9},(_,i)=>`<option value="${i}" ${String(m.Tier||'1')===String(i)?'selected':''}>Tier ${i} — ${SEC_TIER_DESC[String(i)]||''}</option>`).join('')}</select></div>${secMemberOrgHtml(rowId,m)}<div class="sec-field full"><label>ตำแหน่ง</label><input class="member-role" list="member-role-list-${rowId}" value="${secEsc(m.Role||'')}" placeholder="เลือกจากรายการหรือพิมพ์ตำแหน่งใหม่"><datalist id="member-role-list-${rowId}"></datalist></div><div class="sec-field full"><label>ความสามารถรายบุคคล</label><textarea class="member-capability" rows="3" placeholder="ระบุความสามารถ ความเชี่ยวชาญ หรือทักษะเฉพาะบุคคล">${secEsc(m.IndividualCapability||'')}</textarea></div><div class="sec-field"><label>สถานะ</label><select class="member-status"><option ${m.Status==='ปฏิบัติงาน'||!m.Status?'selected':''}>ปฏิบัติงาน</option><option ${m.Status==='พักงาน'?'selected':''}>พักงาน</option><option ${m.Status==='พ้นสังกัด'?'selected':''}>พ้นสังกัด</option></select></div>`;
-      rows.appendChild(div);
-      const root=div.querySelector('.member-org-root'),sub=div.querySelector('.member-org-sub');
-      const refresh=()=>{const rid=String(root.value||'');const kids=rid?secOrgOptions.filter(x=>String(x.Level||'').trim()==='หน่วยงานย่อย'&&String(x.ParentID||'')===rid):secOrgOptions.filter(x=>String(x.Level||'').trim()==='หน่วยงานย่อย');sub.innerHTML='<option value="">-- ไม่เลือกก็ได้ --</option>'+kids.map(x=>`<option value="${secEsc(x.ID)}">${secEsc(x.NameTH||x.NameEN||x.ID)}</option>`).join('');sub.disabled=false;secUpdateMemberRoleList(div);};
-      root.addEventListener('change',refresh);sub.addEventListener('change',()=>secUpdateMemberRoleList(div));
-      if(!existing)div.querySelector('.sec-member-remove')?.addEventListener('click',()=>div.remove());
-      secUpdateMemberRoleList(div);
-      if(existing&&m.OrganizationID){sub.value=String(m.OrganizationID);secUpdateMemberRoleList(div);}
-      secApplyMemberTeamRules(document.getElementById('sec-member-team')?.value||'',div);
+      const row=document.createElement('div');row.className='sec-member-entry-row';row.dataset.rowId=rowId;
+      row.dataset.personId=String(m.PersonID || '');row.dataset.positionId=String(m.PositionID || '');row.dataset.positionOrgId=String(m.OrganizationID || '');
+      row.innerHTML=`<div class="member-row-head"><span class="sec-member-row-no">สมาชิก</span>${existing?'<span class="sec-badge">แก้ไขข้อมูล</span>':'<button type="button" class="sec-btn sec-member-remove">ลบช่อง</button>'}</div>
+        <div class="sec-field"><label>ยศ</label><input class="member-rank sec-member-rank" value="${secEsc(m.Rank||'')}"></div>
+        <div class="sec-field sec-member-name-field"><label>ชื่อ-นามสกุล</label><input class="member-name" maxlength="200" value="${secEsc(m.Name||'')}" placeholder="ระบบดึงชื่อเมื่อเลือกบุคลากร"></div>
+        <div class="sec-field"><label>ชื่อเล่น</label><input class="member-nickname" maxlength="100" value="${secEsc(m.Nickname||'')}"></div>
+        <div class="sec-field"><label>Tier</label><select class="member-tier">${Array.from({length:9},(_,i)=>`<option value="${i}" ${String(m.Tier??'1')===String(i)?'selected':''}>Tier ${i} — ${SEC_TIER_DESC[String(i)]||''}</option>`).join('')}</select></div>
+        ${secMemberOrgHtml(rowId,m)}
+        <div class="sec-field full"><label>ตำแหน่งจากระบบ</label><select class="member-position" aria-label="ตำแหน่งจากระบบ"></select><input class="member-role" value="${secEsc(m.Role||'')}" placeholder="กรอกตำแหน่งเอง" hidden><div class="member-position-people" aria-live="polite"></div></div>
+        <div class="sec-field full"><label>บุคลากรในตำแหน่ง</label><select class="member-person" aria-label="บุคลากรในตำแหน่ง" disabled><option value="">-- เลือกตำแหน่งก่อน --</option></select><small class="member-person-hint sec-muted"></small></div>
+        <div class="sec-field full"><label>ความสามารถรายบุคคล</label><textarea class="member-capability" rows="3" placeholder="ระบุความสามารถ ความเชี่ยวชาญ หรือทักษะเฉพาะบุคคล">${secEsc(m.IndividualCapability||'')}</textarea></div>
+        <div class="sec-field"><label>สถานะ</label><select class="member-status">${['ปฏิบัติงาน','พักงาน','พ้นสังกัด'].map(status=>`<option ${m.Status===status || (!m.Status && status==='ปฏิบัติงาน')?'selected':''}>${status}</option>`).join('')}</select></div>`;
+      rows.appendChild(row);
+      const root=row.querySelector('.member-org-root'),sub=row.querySelector('.member-org-sub');
+      root.addEventListener('change',()=>{
+        const kids=secOrgOptions.filter(o=>String(o.Level)==='หน่วยงานย่อย' && (!root.value || String(o.ParentID)===root.value));
+        sub.innerHTML='<option value="">-- ไม่เลือกก็ได้ --</option>'+kids.map(o=>`<option value="${secEsc(o.ID)}">${secEsc(o.NameTH||o.NameEN||o.ID)}</option>`).join('');
+        secUpdateMemberRoleList(row,true);
+      });
+      sub.addEventListener('change',()=>secUpdateMemberRoleList(row,true));
+      row.querySelector('.member-position').addEventListener('change',()=>secMemberPositionChanged(row,true));
+      row.querySelector('.member-person').addEventListener('change',()=>secMemberPersonChanged(row));
+      row.querySelector('.sec-member-remove')?.addEventListener('click',()=>{row.remove();rows.querySelectorAll('.sec-member-row-no').forEach((el,i)=>el.textContent='สมาชิกคนที่ '+(i+1));});
+      secUpdateMemberRoleList(row);
       rows.querySelectorAll('.sec-member-row-no').forEach((el,i)=>el.textContent='สมาชิกคนที่ '+(i+1));
     }
-
-    function secUpdateMemberRoleList(row){
-      const root=row.querySelector('.member-org-root'),sub=row.querySelector('.member-org-sub'),dl=row.querySelector('datalist');if(!root||!sub||!dl)return;
-      const rootId=String(root.value||''),subId=String(sub.value||'');
-      let positions=[];
-      if(subId){
-        positions=secPositions.filter(p=>String(p.OrganizationID||'')===subId);
-      }else if(rootId){
-        const childIds=secOrgOptions.filter(x=>String(x.Level||'').trim()==='หน่วยงานย่อย'&&String(x.ParentID||'')===rootId).map(x=>String(x.ID));
-        positions=secPositions.filter(p=>String(p.OrganizationID||'')===rootId||childIds.indexOf(String(p.OrganizationID||''))>=0);
-      }else{
-        positions=secPositions.slice();
+    function secMemberAvailablePositions(row) {
+      const rootId=row.querySelector('.member-org-root').value,subId=row.querySelector('.member-org-sub').value;
+      const children=secOrgOptions.filter(o=>String(o.ParentID)===rootId).map(o=>String(o.ID));
+      return personnelPositions.filter(p=>subId?String(p.OrganizationID)===subId:!rootId || String(p.OrganizationID)===rootId || children.includes(String(p.OrganizationID)));
+    }
+    function secUpdateMemberRoleList(row,organizationChanged=false) {
+      const select=row.querySelector('.member-position');if(!select)return;
+      const positions=secMemberAvailablePositions(row),role=row.querySelector('.member-role').value;
+      let previous=select.value || (row.dataset.positionId?JSON.stringify([row.dataset.positionOrgId,row.dataset.positionId]):'');
+      if(organizationChanged && previous!=='__manual__' && !positions.some(p=>personnelKey(p)===previous)){
+        previous='';row.dataset.personId='';row.dataset.positionId='';row.dataset.positionOrgId='';
+        row.querySelector('.member-name').value='';row.querySelector('.member-nickname').value='';row.querySelector('.member-role').value='';
       }
-      dl.innerHTML=positions.map(p=>`<option value="${secEsc(p.PositionName||'')}">`).join('');
+      select.innerHTML='<option value="">'+(personnelLoaded?'-- เลือกตำแหน่ง --':'กำลังโหลดตำแหน่ง...')+'</option>'+positions.map(p=>`<option value="${secEsc(personnelKey(p))}">${secEsc(p.PositionName+' — '+(p.OrganizationNameTH||p.OrganizationNameEN||p.OrganizationID))}</option>`).join('')+'<option value="__manual__">กรอกตำแหน่งเอง (แบบเดิม)</option>';
+      if(previous==='__manual__' || positions.some(p=>personnelKey(p)===previous))select.value=previous;
+      else if(!organizationChanged && !row.dataset.positionId && role){
+        const matching=positions.filter(p=>p.PositionName===role && String(p.OrganizationID)===row.dataset.positionOrgId);
+        select.value=matching.length===1?personnelKey(matching[0]):'__manual__';
+      }
+      // Retain missing saved links as a visible choice instead of silently remapping them.
+      if(row.dataset.personId && !select.value && previous){
+        const option=document.createElement('option');option.value=previous;option.textContent=(role||'ตำแหน่งเดิม')+' (ไม่มีในรายการปัจจุบัน)';select.appendChild(option);select.value=previous;
+      }
+      secMemberPositionChanged(row,false);
+    }
+    function secMemberPositionChanged(row,userChanged) {
+      const select=row.querySelector('.member-position'),role=row.querySelector('.member-role'),people=row.querySelector('.member-person');
+      const position=personnelPositions.find(p=>personnelKey(p)===select.value);
+      const manual=select.value==='__manual__';role.hidden=!manual;
+      if(userChanged){row.dataset.personId='';row.dataset.positionId='';row.dataset.positionOrgId='';row.querySelector('.member-name').value='';row.querySelector('.member-nickname').value='';}
+      row.querySelector('.member-name').readOnly=false;row.querySelector('.member-nickname').readOnly=false;
+      row.querySelector('.member-position-people').innerHTML=position?positionPersonnelHtml(position):'';
+      people.innerHTML='<option value="">'+(position?'-- เลือกบุคลากร --':'-- เลือกตำแหน่งก่อน --')+'</option>';
+      people.disabled=!position;
+      if(!position){
+        if(userChanged && !manual)role.value='';
+        row.querySelector('.member-person-hint').textContent=manual?'กรอกชื่อและชื่อเล่นของสมาชิกได้ตามเดิม':row.dataset.personId?'ไม่พบข้อมูลเดิม กรุณาโหลดรายการหรือเลือกตำแหน่งใหม่':'';
+        return;
+      }
+      role.value=position.PositionName;row.dataset.positionId=String(position.PositionID);row.dataset.positionOrgId=String(position.OrganizationID);
+      const list=personnelAtPosition(position);
+      list.forEach(person=>{const option=document.createElement('option');option.value=person.PersonID;option.textContent=personnelDisplayName(person);people.appendChild(option);});
+      const previous=row.dataset.personId;
+      if(list.some(p=>p.PersonID===previous))people.value=previous;
+      else if(list.length===1 && (userChanged || !row.querySelector('.member-name').value.trim()))people.value=list[0].PersonID;
+      else if(previous && !userChanged){
+        const option=document.createElement('option');option.value=previous;option.textContent=personnelDisplayName({Name:row.querySelector('.member-name').value,Nickname:row.querySelector('.member-nickname').value})+' (ข้อมูลเดิมเปลี่ยนแล้ว)';people.appendChild(option);people.value=previous;
+      }
+      row.querySelector('.member-person-hint').textContent=list.length>1?'เลือกบุคลากร 1 คนจากตำแหน่งนี้':list.length===1?'ระบบดึงชื่อและชื่อเล่นให้อัตโนมัติ':'ตำแหน่งนี้ยังไม่มีรายชื่อบุคลากร เพิ่มรายชื่อในระบบโครงสร้างองค์กร หรือกรอกชื่อสมาชิกเอง';
+      secMemberPersonChanged(row,false);
+    }
+    function secMemberPersonChanged(row,userChanged=true) {
+      const person=personnelDirectory.find(p=>p.PersonID===row.querySelector('.member-person').value && String(p.PositionID)===row.dataset.positionId && String(p.OrganizationID)===row.dataset.positionOrgId);
+      if(person){
+        row.dataset.personId=person.PersonID;row.querySelector('.member-name').value=person.Name;row.querySelector('.member-nickname').value=person.Nickname||'';
+        row.querySelector('.member-name').readOnly=true;row.querySelector('.member-nickname').readOnly=true;
+      }else if(userChanged){
+        row.dataset.personId='';row.querySelector('.member-name').value='';row.querySelector('.member-nickname').value='';row.querySelector('.member-name').readOnly=false;row.querySelector('.member-nickname').readOnly=false;
+      }
     }
 
     function secGetMemberTeamContext(teamId){
@@ -2875,10 +2953,12 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
       const payloads=[];
       for(const row of rows){
         const root=row.querySelector('.member-org-root')?.value||'',sub=row.querySelector('.member-org-sub')?.value||'';
-        const orgId=sub||root, org=secOrgOptions.find(x=>String(x.ID)===String(orgId));
+        const selectedPosition=personnelPositions.find(p=>personnelKey(p)===row.querySelector('.member-position').value);
+        const orgId=selectedPosition?String(selectedPosition.OrganizationID):(sub||root), org=secOrgOptions.find(x=>String(x.ID)===String(orgId));
         const name=row.querySelector('.member-name')?.value||'',role=row.querySelector('.member-role')?.value||'';
         if(!String(name).trim())return secNotify('กรุณาระบุชื่อสมาชิก');
-        payloads.push({MemberID:editId,TeamID:teamId,Rank:row.querySelector('.member-rank')?.value||'',Name:name,Organization:org?(org.NameTH||org.NameEN||''):'',OrganizationID:orgId||'',OrganizationParentID:sub?(root||((org&&String(org.Level||'').trim()==='หน่วยงานย่อย')?String(org.ParentID||''):'')):'',Role:role,Tier:row.querySelector('.member-tier')?.value||'1',Status:row.querySelector('.member-status')?.value||'ปฏิบัติงาน',IndividualCapability:row.querySelector('.member-capability')?.value||''});
+        if (row.dataset.personId && !personnelDirectory.some(p=>p.PersonID===row.dataset.personId && selectedPosition && personnelKey(p)===personnelKey(selectedPosition))) return secNotify('รายชื่อหรือตำแหน่งเปลี่ยนแล้ว กรุณาเลือกบุคลากรใหม่');
+        payloads.push({MemberID:editId,TeamID:teamId,PersonID:row.dataset.personId||'',PositionID:selectedPosition?selectedPosition.PositionID:'',Nickname:row.querySelector('.member-nickname').value.trim(),Rank:row.querySelector('.member-rank')?.value||'',Name:name,Organization:org?(org.NameTH||org.NameEN||''):'',OrganizationID:orgId||'',OrganizationParentID:org?String(org.ParentID||''):'',Role:role,Tier:row.querySelector('.member-tier')?.value||'1',Status:row.querySelector('.member-status')?.value||'ปฏิบัติงาน',IndividualCapability:row.querySelector('.member-capability')?.value||''});
       }
       const btn=document.getElementById('sec-member-save-btn');if(btn)btn.disabled=true;
       secShowSaving('กำลังบันทึกข้อมูลสมาชิก...');
@@ -2936,10 +3016,11 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
     function secOpenPersonalModal(id){
       const m=secMembers.find(x=>String(x.MemberID)===String(id));if(!m)return;
       const set=(x,v)=>{const e=document.getElementById(x);if(e)e.value=v==null?'':v;};
-      set('sec-personal-member-id',m.MemberID);set('sec-personal-rank',m.Rank);set('sec-personal-name',m.Name);set('sec-personal-tier',m.Tier||'1');set('sec-personal-status',m.Status||'ปฏิบัติงาน');
+      set('sec-personal-member-id',m.MemberID);set('sec-personal-rank',m.Rank);set('sec-personal-name',m.Name);set('sec-personal-nickname',m.Nickname||'');set('sec-personal-tier',m.Tier||'1');set('sec-personal-status',m.Status||'ปฏิบัติงาน');
       const parent=secOrgOptions.find(x=>String(x.ID)===String(m.OrganizationParentID||''));const org=secOrgOptions.find(x=>String(x.ID)===String(m.OrganizationID||''));
       set('sec-personal-org-root',parent?(parent.NameTH||parent.NameEN||''):((org&&String(org.Level)==='หน่วยงานย่อย')?'':(org?(org.NameTH||org.NameEN||''):'')));
       set('sec-personal-org-sub',org&&String(org.Level)==='หน่วยงานย่อย'?(org.NameTH||org.NameEN||''):'');set('sec-personal-role',m.Role||'');set('sec-personal-capability',m.IndividualCapability||'');set('sec-personal-org',m.Organization||'');set('sec-personal-org-id',m.OrganizationID||'');set('sec-personal-org-parent-id',m.OrganizationParentID||'');
+      ['sec-personal-name','sec-personal-nickname','sec-personal-role','sec-personal-org-root','sec-personal-org-sub'].forEach(id=>document.getElementById(id).readOnly=!!m.PersonID);
       secFillPersonalDatalists();document.getElementById('sec-personal-modal')?.classList.add('open');
     }
     function secFillPersonalDatalists(){
@@ -2953,7 +3034,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
       const id=document.getElementById('sec-personal-member-id')?.value||'';if(!id)return secNotify('ไม่พบสมาชิก');
       const rootName=document.getElementById('sec-personal-org-root')?.value||'',subName=document.getElementById('sec-personal-org-sub')?.value||'';
       const root=secOrgOptions.find(x=>String(x.NameTH||x.NameEN||'').trim()===String(rootName).trim());const sub=secOrgOptions.find(x=>String(x.NameTH||x.NameEN||'').trim()===String(subName).trim());const org=sub||root;
-      const data={MemberID:id,TeamID:(secMembers.find(x=>String(x.MemberID)===String(id))||{}).TeamID||'',Rank:document.getElementById('sec-personal-rank')?.value||'',Name:document.getElementById('sec-personal-name')?.value||'',Tier:document.getElementById('sec-personal-tier')?.value||'1',Status:document.getElementById('sec-personal-status')?.value||'ปฏิบัติงาน',Role:document.getElementById('sec-personal-role')?.value||'',IndividualCapability:document.getElementById('sec-personal-capability')?.value||'',Organization:org?(org.NameTH||org.NameEN||''):'',OrganizationID:org?String(org.ID):'',OrganizationParentID:sub?String(root?.ID||sub.ParentID||''):''};
+      const data={MemberID:id,TeamID:(secMembers.find(x=>String(x.MemberID)===String(id))||{}).TeamID||'',Rank:document.getElementById('sec-personal-rank')?.value||'',Name:document.getElementById('sec-personal-name')?.value||'',Nickname:document.getElementById('sec-personal-nickname')?.value||'',Tier:document.getElementById('sec-personal-tier')?.value||'1',Status:document.getElementById('sec-personal-status')?.value||'ปฏิบัติงาน',Role:document.getElementById('sec-personal-role')?.value||'',IndividualCapability:document.getElementById('sec-personal-capability')?.value||'',Organization:org?(org.NameTH||org.NameEN||''):'',OrganizationID:org?String(org.ID):'',OrganizationParentID:sub?String(root?.ID||sub.ParentID||''):''};
       const btn=document.getElementById('sec-personal-save-btn');if(btn)btn.disabled=true;
       secShowSaving('กำลังบันทึกข้อมูลส่วนบุคคล...');
       google.script.run.withSuccessHandler(function(){

@@ -1802,7 +1802,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
       google.script.run.withSuccessHandler(saved=>{
         const index=personnelDirectory.findIndex(p=>p.PersonID===saved.PersonID);
         if(index<0)personnelDirectory.push(saved); else personnelDirectory[index]=saved;
-        setPersonnelBusy(false); if(!data.PersonID)resetPersonnelForm(); personnelChanged(); restoreSaveLocation(saveContext); showToast('บันทึกบุคลากรเรียบร้อยแล้ว','success');
+        setPersonnelBusy(false); resetPersonnelForm(); personnelChanged(); restoreSaveLocation(saveContext); showToast('บันทึกบุคลากรเรียบร้อยแล้ว','success');
       }).withFailureHandler(error=>{
         setPersonnelBusy(false);document.getElementById('personnelFormStatus').textContent='บันทึกไม่สำเร็จ: '+(error.message || error);showToast('บันทึกไม่สำเร็จ: '+(error.message || error),'error');
       }).savePersonnel(data);

@@ -980,6 +980,25 @@
 
     #sec-member-modal .member-position,#sec-member-modal .member-person { min-width:0;max-width:100%; }
     @media(max-width:560px) { #sec-member-modal .sec-member-name-field { grid-column:1/-1; } }
+    /* Sticky headers stay below every dialog, confirmation and save overlay. */
+    #organizationSystem > header, #secretariatSystem .sec-header {
+      position:sticky;
+      top:0;
+      z-index:100;
+      max-height:50vh;
+      max-height:50dvh;
+      overflow-y:auto;
+      overscroll-behavior:contain;
+    }
+    #secretariatSystem .sec-sidebar {
+      top:calc(var(--phoenix-header-height,0px) + 18px);
+      z-index:10;
+    }
+    html { scroll-padding-top:calc(var(--phoenix-header-height,0px) + 16px); }
+    @media(max-width:800px) {
+      #secretariatSystem .sec-sidebar { top:auto; }
+    }
+
   </style>
     <div class="sec-shell">
       <header class="sec-header">
@@ -1768,6 +1787,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
       loadPersonnelDirectory(true);
     }
     function savePersonnelForm(event) {
+      const saveContext=captureSaveLocation();
       event.preventDefault(); if(personnelBusy)return;
       const form=document.getElementById('personnelForm'); if(!form.reportValidity())return;
       const data={PersonID:document.getElementById('personnelId').value,Name:document.getElementById('personnelName').value.trim(),Nickname:document.getElementById('personnelNickname').value.trim(),OrganizationID:document.getElementById('personnelOrganization').value,PositionID:document.getElementById('personnelPosition').value,Note:document.getElementById('personnelNote').value.trim()};
@@ -1777,7 +1797,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
       google.script.run.withSuccessHandler(saved=>{
         const index=personnelDirectory.findIndex(p=>p.PersonID===saved.PersonID);
         if(index<0)personnelDirectory.push(saved); else personnelDirectory[index]=saved;
-        setPersonnelBusy(false); resetPersonnelForm(); personnelChanged(); showToast('บันทึกบุคลากรเรียบร้อยแล้ว','success');
+        setPersonnelBusy(false); if(!data.PersonID)resetPersonnelForm(); personnelChanged(); restoreSaveLocation(saveContext); showToast('บันทึกบุคลากรเรียบร้อยแล้ว','success');
       }).withFailureHandler(error=>{
         setPersonnelBusy(false);document.getElementById('personnelFormStatus').textContent='บันทึกไม่สำเร็จ: '+(error.message || error);showToast('บันทึกไม่สำเร็จ: '+(error.message || error),'error');
       }).savePersonnel(data);
@@ -1866,6 +1886,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 
       if (systemName === 'organization') {
         document.getElementById('organizationSystem').style.display = 'block';
+        updateStickyHeaderHeight();
         if (!allData || !Array.isArray(allData) || allData.length === 0) {
           loadData();
         }
@@ -1877,6 +1898,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
       if (systemName === 'secretariat') {
         stopRealtimeSync();
         document.getElementById('secretariatSystem').style.display = 'block';
+        updateStickyHeaderHeight();
         secInit();
         return;
       }
@@ -2088,8 +2110,6 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
       return `<table class="sec-table"><thead><tr><th>หน่วยงาน</th><th>งบจัดสรร</th><th>งบสำรองที่จัดสรร</th></tr></thead><tbody>${roots.map(function(r){const a=secBudgetEffective(r.ID),res=secBudgetReserveEffective(r.ID);return `<tr><td class="sec-budget-org-name-cell" title="${secEsc(secBudgetLabel(r))}">${secEsc(secBudgetLabel(r))}</td><td class="sec-budget-number-cell">${secMoney(a)}</td><td class="sec-budget-number-cell">${secMoney(res)}</td></tr>`;}).join('')}</tbody></table>`;
     }
     function secRenderTeams(){
-      const list=document.getElementById('sec-team-list-view'), detail=document.getElementById('sec-team-detail-view');
-      if(list)list.style.display='block'; if(detail)detail.style.display='none';
       const grid=document.getElementById('sec-team-grid');
       if(!grid)return;
       grid.innerHTML=secTeams.map(t=>`<article class="sec-card" onclick="secOpenTeamDetail('${t.TeamID}')"><div style="display:flex;justify-content:space-between"><span class="sec-badge">${secEsc(t.Code||t.TeamID)}</span><span class="sec-badge">${secTierLabel(t.Tier)}</span></div><h3>${secEsc(t.Name)}</h3><p>หน่วยงาน: ${secEsc(t.Organization||'-')}</p><p>สมาชิก: ${secMembers.filter(m=>String(m.TeamID)===String(t.TeamID)).length} คน · ${secEsc(t.Status||'-')}</p></article>`).join('')||'<div class="sec-empty">ยังไม่มีทีม</div>';
@@ -2121,7 +2141,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
     function secOpenTeamDetail(id){
       secPage('teams');const t=secTeams.find(x=>String(x.TeamID)===String(id));if(!t)return;
       const members=secMembers.filter(m=>String(m.TeamID)===String(id)).sort((a,b)=>Number(a.MemberOrder||999999)-Number(b.MemberOrder||999999));
-      const list=document.getElementById('sec-team-list-view'),detail=document.getElementById('sec-team-detail-view'),all=document.getElementById('sec-all-members-view');list.style.display='none';detail.style.display='block';if(all)all.style.display='none';const head=members[0];
+      const list=document.getElementById('sec-team-list-view'),detail=document.getElementById('sec-team-detail-view'),all=document.getElementById('sec-all-members-view');list.style.display='none';detail.style.display='block';detail.dataset.teamId=String(id);if(all)all.style.display='none';const head=members[0];
       detail.innerHTML=`<div class="sec-team-detail-page"><div class="sec-team-detail-toolbar"><div><div class="left"><button class="sec-btn" onclick="secBackToTeamList()">← กลับทีมปฏิบัติการ</button><span class="sec-badge">${secEsc(t.Code||t.TeamID)}</span><span class="sec-badge">Tier ${secEsc(t.Tier||'-')}</span></div><h2>${secEsc(t.Name||'-')}</h2><p>${secEsc(t.Organization||'-')} · ${secEsc(t.Status||'-')}</p></div><div class="right" style="display:flex;gap:8px;flex-wrap:wrap"><button class="sec-btn" onclick="secOpenTeamModal('${t.TeamID}')">แก้ไขข้อมูลทีม</button><button class="sec-btn primary" onclick="secOpenAllMembersPage()">จัดการสมาชิก</button><button class="sec-btn sec-team-danger" onclick="secDeleteTeam('${t.TeamID}')">ลบทีม</button></div></div>
         ${t.Description?`<div class="sec-team-head-card"><strong>ภารกิจ / รายละเอียด</strong><div style="margin-top:6px;color:#475569;white-space:pre-wrap">${secEsc(t.Description)}</div></div>`:''}
         <div class="sec-team-head-card"><strong>หัวหน้าทีม</strong><div style="margin-top:5px">${head?secEsc(secMemberDisplayName(head)):'ยังไม่ได้กำหนดหัวหน้าทีม'}</div>${head?`<small>${secEsc(head.Role||'-')} · ${secEsc(head.Organization||'-')}</small>`:''}</div>
@@ -2387,6 +2407,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
     }
 
     function secSubmitEmergencyExpense(){
+      const saveContext=captureSaveLocation();
       var m=document.getElementById('sec-emergency-expense-modal');
       var year=String(document.getElementById('sec-emergency-fiscal-year').value||secBudgetFiscalYear).trim();
       var item=String(document.getElementById('sec-emergency-name').value||'').trim();
@@ -2410,11 +2431,12 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
           if(idx>=0)secEmergencyExpenses[idx]=row;else secEmergencyExpenses.push(row);
         }else secEmergencyExpenses.push(row);
         secBudgetFiscalYear=year;
-        secCloseModal('sec-emergency-expense-modal');
+        if(!id)secCloseModal('sec-emergency-expense-modal');
         secRenderEmergencyExpenses();secRenderBudgets();secRenderDashboard();
         if(btn){btn.disabled=false;btn.textContent=id?'บันทึกการแก้ไข':'＋ เพิ่มรายการ';}
         secHideSaving();
         secSavingSuccess(id?'แก้ไขค่าใช้จ่ายพิเศษ/ฉุกเฉินเรียบร้อยแล้ว':'เพิ่มค่าใช้จ่ายพิเศษ/ฉุกเฉินเรียบร้อยแล้ว',650);
+        restoreSaveLocation(saveContext);
       }).withFailureHandler(function(e){
         if(btn){btn.disabled=false;btn.textContent=id?'บันทึกการแก้ไข':'＋ เพิ่มรายการ';}
         secHideSaving();
@@ -2506,10 +2528,11 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
       var btn=m.querySelector('.sec-form-actions .sec-btn.primary');if(btn)btn.textContent='บันทึกการแก้ไข';m.classList.add('open');
     }
     function secSubmitCentralBudget(){
+      const saveContext=captureSaveLocation();
       var m=document.getElementById('sec-central-budget-modal'), year=String(document.getElementById('sec-central-fiscal-year').value||secBudgetFiscalYear).trim(), item=String(document.getElementById('sec-central-name').value||'').trim(), monthly=Number(document.getElementById('sec-central-monthly').value||0), months=Number(document.getElementById('sec-central-months').value||12), annual=Number(document.getElementById('sec-central-annual').value||0), note=String(document.getElementById('sec-central-note').value||'').trim(), id=String(m.dataset.editId||'').trim();
       if(!year)return secNotify('กรุณาระบุปีงบประมาณ'); if(!item)return secNotify('กรุณาระบุรายการค่าใช้จ่าย'); if(!isFinite(months)||months<1||months>12)return secNotify('จำนวนเดือนต้องอยู่ระหว่าง 1-12'); if(!isFinite(annual)||annual<=0)return secNotify('งบส่วนกลางทั้งปีต้องมากกว่า 0');
       var btn=m.querySelector('.sec-form-actions .sec-btn.primary');if(btn){btn.disabled=true;btn.textContent='กำลังบันทึก...';}secShowSaving('กำลังบันทึกงบส่วนกลาง...');
-      google.script.run.withSuccessHandler(function(){secBudgetFiscalYear=year;secCloseModal('sec-central-budget-modal');if(btn){btn.disabled=false;btn.textContent=id?'บันทึกการแก้ไข':'＋ เพิ่มรายการ';}secHideSaving();secSavingSuccess(id?'แก้ไขงบส่วนกลางเรียบร้อยแล้ว':'เพิ่มงบส่วนกลางเรียบร้อยแล้ว',650);secLoadCentralBudgets();}).withFailureHandler(function(e){if(btn){btn.disabled=false;btn.textContent=id?'บันทึกการแก้ไข':'＋ เพิ่มรายการ';}secHideSaving();secNotify('บันทึกงบส่วนกลางไม่สำเร็จ\n'+secErr(e));}).secSaveCentralBudget({CentralID:id,FiscalYear:year,Item:item,MonthlyAmount:monthly,Months:months,Amount:annual,Note:note});
+      google.script.run.withSuccessHandler(function(){secBudgetFiscalYear=year;if(!id)secCloseModal('sec-central-budget-modal');if(btn){btn.disabled=false;btn.textContent=id?'บันทึกการแก้ไข':'＋ เพิ่มรายการ';}secHideSaving();secSavingSuccess(id?'แก้ไขงบส่วนกลางเรียบร้อยแล้ว':'เพิ่มงบส่วนกลางเรียบร้อยแล้ว',650);secLoadCentralBudgets();restoreSaveLocation(saveContext);}).withFailureHandler(function(e){if(btn){btn.disabled=false;btn.textContent=id?'บันทึกการแก้ไข':'＋ เพิ่มรายการ';}secHideSaving();secNotify('บันทึกงบส่วนกลางไม่สำเร็จ\n'+secErr(e));}).secSaveCentralBudget({CentralID:id,FiscalYear:year,Item:item,MonthlyAmount:monthly,Months:months,Amount:annual,Note:note});
     }
     function secDeleteCentralBudgetUI(id){
       var x=secCentralBudgets.find(function(a){return String(a.CentralID)===String(id);});if(!x)return;
@@ -2609,6 +2632,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
       var btn=document.querySelector('#sec-budget-config-modal .sec-form-actions .sec-btn.primary');if(btn){btn.textContent='บันทึกการแก้ไข';}
     }
     function secSubmitBudgetConfig(){
+      const saveContext=captureSaveLocation();
       var modal=document.getElementById('sec-budget-config-modal');
       var year=String(document.getElementById('sec-budget-fiscal-year-input').value||secBudgetFiscalYear).trim();
       var sourceName=String(document.getElementById('sec-budget-source-name-input').value||'').trim();
@@ -2623,8 +2647,9 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
         var localRow={SourceID:editId || String((res&&res.SourceID)||''),FiscalYear:year,SourceName:sourceName,Amount:amount,BudgetPart:part,Note:note};
         if(editId){var si=secBudgetSources.findIndex(function(a){return String(a.SourceID)===editId;});if(si>=0)secBudgetSources[si]=localRow;else secBudgetSources.push(localRow);}else{secBudgetSources.push(localRow);}
         secRenderBudgetSources();secRenderBudgets();
-        document.getElementById('sec-budget-source-name-input').value='';document.getElementById('sec-budget-source-amount-input').value='';document.getElementById('sec-budget-source-note-input').value='';modal.dataset.editId='';
-        if(btn){btn.disabled=false;btn.textContent='＋ เพิ่มรายการ';}
+        if(!editId){document.getElementById('sec-budget-source-name-input').value='';document.getElementById('sec-budget-source-amount-input').value='';document.getElementById('sec-budget-source-note-input').value='';modal.dataset.editId='';}
+        if(btn){btn.disabled=false;btn.textContent=editId?'บันทึกการแก้ไข':'＋ เพิ่มรายการ';}
+        restoreSaveLocation(saveContext);
         secHideSaving();
         secSavingSuccess(editId?'แก้ไขรายการแหล่งงบเรียบร้อยแล้ว':'เพิ่มแหล่งงบเรียบร้อยแล้ว',650);
       }).withFailureHandler(function(e){if(btn){btn.disabled=false;btn.textContent=editId?'บันทึกการแก้ไข':'＋ เพิ่มรายการ';}secHideSaving();secNotify('บันทึกแหล่งงบไม่สำเร็จ\n'+secErr(e));}).secSaveBudgetSource({SourceID:editId,FiscalYear:year,SourceName:sourceName,Amount:amount,BudgetPart:part,Note:note});
@@ -2693,13 +2718,14 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
     }
     function secBackBudgetOverview(){secBudgetCurrentOrgId='';document.getElementById('sec-budget-detail-view').style.display='none';document.getElementById('sec-budget-overview-view').style.display='block';secRenderBudgets();}
     function secSaveBudgetUnit(orgId,parentId){
+      const saveContext=captureSaveLocation();
       var amountEl=document.querySelector(`[data-budget-field="amount"][data-org-id="${CSS.escape(String(orgId))}"]`),reserveEl=document.querySelector(`[data-budget-field="reserve"][data-org-id="${CSS.escape(String(orgId))}"]`);
       var amount=Number(amountEl&&amountEl.value||0),reserve=Number(reserveEl&&reserveEl.value||0);if(!isFinite(amount)||!isFinite(reserve)){secNotify('จำนวนเงินไม่ถูกต้อง');return;}
       var noteEl=document.getElementById('sec-budget-note-'+secEsc(parentId||orgId));
       var org=secOrgOptions.find(function(x){return String(x.ID)===String(orgId);});
       var parent=parentId?secOrgOptions.find(function(x){return String(x.ID)===String(parentId);}):null;
       var data={FiscalYear:secBudgetFiscalYear,OrganizationID:orgId,ParentID:parentId||'',Organization:org?org.NameTH:'',ParentOrganization:parent?parent.NameTH:'',BudgetAmount:amount,ReserveAmount:reserve,Note:noteEl?noteEl.value.trim():''};
-      secShowSaving('กำลังบันทึกงบประมาณของหน่วยงาน...');google.script.run.withSuccessHandler(function(){var i=secBudgetUnits.findIndex(function(x){return String(x.OrganizationID)===String(orgId)&&String(x.FiscalYear||secBudgetFiscalYear)===String(secBudgetFiscalYear);});var row=Object.assign({ID:(i>=0&&secBudgetUnits[i].ID)||''},data);if(i>=0)secBudgetUnits[i]=row;else secBudgetUnits.push(row);secRenderBudgets();secHideSaving();secSavingSuccess('บันทึกงบประมาณของหน่วยงานเรียบร้อยแล้ว',650);}).withFailureHandler(function(e){secHideSaving();secNotify('บันทึกงบประมาณไม่สำเร็จ: '+secErr(e));}).secSaveBudgetUnit(data);
+      secShowSaving('กำลังบันทึกงบประมาณของหน่วยงาน...');google.script.run.withSuccessHandler(function(){var i=secBudgetUnits.findIndex(function(x){return String(x.OrganizationID)===String(orgId)&&String(x.FiscalYear||secBudgetFiscalYear)===String(secBudgetFiscalYear);});var row=Object.assign({ID:(i>=0&&secBudgetUnits[i].ID)||''},data);if(i>=0)secBudgetUnits[i]=row;else secBudgetUnits.push(row);secRenderBudgets();secHideSaving();secSavingSuccess('บันทึกงบประมาณของหน่วยงานเรียบร้อยแล้ว',650);restoreSaveLocation(saveContext);}).withFailureHandler(function(e){secHideSaving();secNotify('บันทึกงบประมาณไม่สำเร็จ: '+secErr(e));}).secSaveBudgetUnit(data);
     }
     function secLoadBudgetUnits(){google.script.run.withSuccessHandler(function(d){secBudgetUnits=Array.isArray(d)?d:[];if(document.getElementById('sec-page-budget').classList.contains('active')){if(secBudgetCurrentOrgId)secOpenBudgetOrg(secBudgetCurrentOrgId);else secRenderBudgets();}}).withFailureHandler(function(e){secBudgetUnits=[];secNotify('โหลดงบประมาณหน่วยงานไม่สำเร็จ: '+secErr(e));}).secGetBudgetUnits(secBudgetFiscalYear);}
     /* =========================================================
@@ -2811,6 +2837,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
     }
 
     function secSaveTeam(event){
+      const saveContext=captureSaveLocation();
       if(event&&event.preventDefault)event.preventDefault();
       secUpdateTeamOrgPath();
       const id=document.getElementById('sec-team-id')?.value||'';
@@ -2831,11 +2858,11 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
       secShowSaving(id?'กำลังบันทึกการแก้ไขทีม...':'กำลังบันทึกทีม...');
       google.script.run.withSuccessHandler(function(savedTeam){
         if(btn)btn.disabled=false;
-        secCloseModal('sec-team-modal');
+        if(!id)secCloseModal('sec-team-modal');
         google.script.run.withSuccessHandler(function(d){
-          secTeams=Array.isArray(d)?d:secTeams;secRenderTeams();secRenderDashboard();
+          secTeams=Array.isArray(d)?d:secTeams;refreshSavedSecretariatView(saveContext);
           secHideSaving();secSavingSuccess(id?'แก้ไขทีมเรียบร้อยแล้ว':'เพิ่มทีมเรียบร้อยแล้ว',700);
-          if(!id && savedTeam && savedTeam.TeamID){secOpenTeamDetail(savedTeam.TeamID);secOpenMemberModal('',savedTeam.TeamID);}
+          restoreSaveLocation(saveContext);
         }).withFailureHandler(function(e){secHideSaving();secNotify('บันทึกทีมสำเร็จ แต่โหลดข้อมูลทีมใหม่ไม่สำเร็จ: '+secErr(e));}).secGetTeams();
       }).withFailureHandler(function(e){if(btn)btn.disabled=false;secHideSaving();secNotify('บันทึกทีมไม่สำเร็จ: '+secErr(e));}).secSaveTeam(data);
     }
@@ -2987,6 +3014,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
     }
 
     function secSaveMember(event){
+      const saveContext=captureSaveLocation();
       if(event&&event.preventDefault)event.preventDefault();
       const teamId=document.getElementById('sec-member-team')?.value||'';const editId=document.getElementById('sec-member-edit-id')?.value||'';
       const rows=[...document.querySelectorAll('#sec-member-rows .sec-member-entry-row')];
@@ -3006,10 +3034,10 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
       let i=0;
       const next=()=>{
         if(i>=payloads.length){
-          if(btn)btn.disabled=false;secCloseModal('sec-member-modal');
+          if(btn)btn.disabled=false;if(!editId)secCloseModal('sec-member-modal');
           google.script.run.withSuccessHandler(d=>{
-            secMembers=Array.isArray(d)?d:secMembers;secRenderDashboard();
-            const detail=document.getElementById('sec-team-detail-view');if(detail&&detail.style.display!=='none')secOpenTeamDetail(teamId);else secRenderTeams();
+            secMembers=Array.isArray(d)?d:secMembers;refreshSavedSecretariatView(saveContext);
+            if(document.getElementById('sec-team-member-manager').style.display!=='none')secRenderTeamEditMembers(teamId);
             secHideSaving();secSavingSuccess('บันทึกข้อมูลสมาชิกเรียบร้อยแล้ว',700);
           }).withFailureHandler(e=>{secHideSaving();secNotify('บันทึกสมาชิกแล้ว แต่โหลดข้อมูลใหม่ไม่สำเร็จ: '+secErr(e));}).secGetMembers();
           return;
@@ -3072,6 +3100,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
       if(pl)pl.innerHTML=secPositions.map(x=>`<option value="${secEsc(x.PositionName||'')}">`).join('');
     }
     function secSavePersonalData(){
+      const saveContext=captureSaveLocation();
       const id=document.getElementById('sec-personal-member-id')?.value||'';if(!id)return secNotify('ไม่พบสมาชิก');
       const rootName=document.getElementById('sec-personal-org-root')?.value||'',subName=document.getElementById('sec-personal-org-sub')?.value||'';
       const root=secOrgOptions.find(x=>String(x.NameTH||x.NameEN||'').trim()===String(rootName).trim());const sub=secOrgOptions.find(x=>String(x.NameTH||x.NameEN||'').trim()===String(subName).trim());const org=sub||root;
@@ -3079,9 +3108,11 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
       const btn=document.getElementById('sec-personal-save-btn');if(btn)btn.disabled=true;
       secShowSaving('กำลังบันทึกข้อมูลส่วนบุคคล...');
       google.script.run.withSuccessHandler(function(){
-        if(btn)btn.disabled=false;secCloseModal('sec-personal-modal');
+        if(btn)btn.disabled=false;
         google.script.run.withSuccessHandler(function(d){
-          secMembers=Array.isArray(d)?d:secMembers;secRenderDashboard();secOpenMemberDetail(id);
+          secMembers=Array.isArray(d)?d:secMembers;refreshSavedSecretariatView(saveContext);
+          if(document.getElementById('sec-member-position-modal').classList.contains('open') && document.getElementById('sec-position-member-id').value===id)secOpenMemberPositionModal(id);
+          restoreSaveLocation(saveContext);
           secHideSaving();secSavingSuccess('บันทึกข้อมูลส่วนบุคคลเรียบร้อยแล้ว',700);
         }).withFailureHandler(function(e){secHideSaving();secNotify('บันทึกข้อมูลสำเร็จ แต่โหลดข้อมูลใหม่ไม่สำเร็จ: '+secErr(e));}).secGetMembers();
       }).withFailureHandler(function(e){if(btn)btn.disabled=false;secHideSaving();secNotify('บันทึกข้อมูลไม่สำเร็จ: '+secErr(e));}).secChangeMemberPersonal(data);
@@ -3503,6 +3534,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
     }
 
     function saveOrganizationProfile() {
+      const saveContext=captureSaveLocation();
       const btn = document.getElementById('profileSaveBtn');
       const data = {
         NameTH: document.getElementById('profileEditNameTH').value.trim(),
@@ -3529,7 +3561,8 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
           btn.disabled = false;
           btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> บันทึก';
           secHideSaving();
-          openOrganizationProfile();
+          ['NameTH','NameEN','Role','Mission','Responsibilities','Vision','Scope','Additional'].forEach(field=>setProfileText('profile'+field,organizationProfile[field]));
+          restoreSaveLocation(saveContext);
           showToast('บันทึกรายละเอียดสถาบันเรียบร้อยแล้ว', 'success');
         })
         .withFailureHandler(function(err) {
@@ -4169,8 +4202,9 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
       updateParentDropdown(parentSelect.value);
     }
 
-    function updateParentDropdown(selectedParentId = '') {
+    function updateParentDropdown(selectedParentId) {
       const parentSelect = document.getElementById('ParentID');
+      if(selectedParentId===undefined)selectedParentId=parentSelect.value;
       const currentId = document.getElementById('ID').value;
       const currentLevel = document.getElementById('Level').value;
 
@@ -4431,6 +4465,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
     }
 
     function handleSubmit(e) {
+      const saveContext=captureSaveLocation();
       e.preventDefault();
 
       const selectedLocations = [...document.querySelectorAll('input[name="locationCheck"]:checked')].map(cb => cb.value);
@@ -4513,10 +4548,12 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
           secHideSaving();
           secSavingSuccess(isInsert ? 'เพิ่มหน่วยงานเรียบร้อยแล้ว' : 'แก้ไขหน่วยงานเรียบร้อยแล้ว', 650);
           showToast('บันทึกข้อมูลหน่วยงานเรียบร้อยแล้ว', 'success');
+          restoreSaveLocation(saveContext);
 
           // บันทึกตำแหน่งต่อโดยไม่ล็อกหน้าเว็บและไม่ทำให้ปุ่มค้าง
           google.script.run
             .withSuccessHandler(function(result) {
+              const positionSaveContext=captureSaveLocation();
               allPositionsDashboard = [];
               managementSummaryData = null;
               loadPersonnelDirectory(true);
@@ -4524,6 +4561,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
               if (document.getElementById('positions-section').classList.contains('active')) loadPositionDashboard(true);
               if (document.getElementById('executive-admin-section').classList.contains('active')) loadExecutiveAdminDashboard(true);
               showToast('บันทึกตำแหน่งของหน่วยงานเรียบร้อยแล้ว', 'success');
+              restoreSaveLocation(positionSaveContext);
             })
             .withFailureHandler(function(err) {
               showToast('บันทึกหน่วยงานแล้ว แต่ไม่สามารถบันทึกตำแหน่งได้: ' + (err.message || err), 'error');
@@ -4939,6 +4977,60 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 
       renderTable(filtered);
     }
+    function updateStickyHeaderHeight() {
+      const header=selectedSystem==='organization'?document.querySelector('#organizationSystem > header'):selectedSystem==='secretariat'?document.querySelector('#secretariatSystem .sec-header'):null;
+      const height=header && header.getClientRects().length ? header.getBoundingClientRect().height : 0;
+      document.documentElement.style.setProperty('--phoenix-header-height',Math.ceil(height)+'px');
+    }
+    function saveLocationKey() {
+      if(selectedSystem==='organization'){
+        const page=document.querySelector('#organizationSystem .view-section.active')?.id;
+        const editor=page==='form-section'?document.getElementById('ID').value:page==='personnel-section'?document.getElementById('personnelId').value:'';
+        return 'organization:'+page+':'+editor;
+      }
+      if(selectedSystem!=='secretariat')return selectedSystem;
+      const page=document.querySelector('#secretariatSystem .sec-page.active');
+      let key='secretariat:'+page?.id;
+      if(page?.id==='sec-page-teams'){
+        const detail=document.getElementById('sec-team-detail-view'),all=document.getElementById('sec-all-members-view');
+        key+=':'+(all.style.display!=='none'?'all':detail.style.display!=='none'?'detail:'+detail.dataset.teamId:'list');
+      }
+      if(page?.id==='sec-page-budget')key+=':'+(secBudgetCurrentOrgId || 'overview');
+      return key;
+    }
+    function captureSaveLocation() {
+      const detail=document.getElementById('sec-team-detail-view');
+      return {
+        key:saveLocationKey(), x:window.scrollX,y:window.scrollY,
+        teamId:detail.dataset.teamId || '',
+        editors:[...document.querySelectorAll('.sec-modal.open .sec-modal-box,.modal-overlay.active .modal-card')].map(el=>({el:el,x:el.scrollLeft,y:el.scrollTop})),
+        lists:[...document.querySelectorAll('.sec-member-entry-list,.sec-position-history-list,.sec-table-wrap,.position-dashboard-table-wrap')].map(el=>({el:el,x:el.scrollLeft,y:el.scrollTop}))
+      };
+    }
+    function restoreSaveLocation(context) {
+      if(!context || saveLocationKey()!==context.key)return;
+      requestAnimationFrame(()=>{
+        if(saveLocationKey()!==context.key)return;
+        [...context.editors,...context.lists].forEach(item=>{if(item.el.isConnected){item.el.scrollLeft=item.x;item.el.scrollTop=item.y;}});
+        window.scrollTo({left:context.x,top:context.y,behavior:'instant'});
+      });
+    }
+    function refreshSavedSecretariatView(context) {
+      secRenderDashboard();secRenderTeams();
+      if(saveLocationKey()!==context.key)return;
+      if(context.key==='secretariat:sec-page-teams:all')secRenderAllMembersPage();
+      else if(context.key==='secretariat:sec-page-teams:detail:'+context.teamId)secOpenTeamDetail(context.teamId);
+      restoreSaveLocation(context);
+    }
+    (function observeStickyHeaders(){
+      const headers=[...document.querySelectorAll('#organizationSystem > header,#secretariatSystem .sec-header')];
+      if(typeof ResizeObserver==='function'){
+        const observer=new ResizeObserver(updateStickyHeaderHeight);headers.forEach(header=>observer.observe(header));
+      }
+      window.addEventListener('resize',updateStickyHeaderHeight);
+      requestAnimationFrame(updateStickyHeaderHeight);
+    })();
+
   </script>
   </div>
 <style>

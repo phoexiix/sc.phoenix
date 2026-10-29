@@ -1581,8 +1581,41 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
     let returnScrollY = 0;
     let organizationProfile = null;
     let currentPositions = [];
+    // Chart order: command levels 1–5; preserve Sheet/drag order within a level.
+    // Flatten each parent followed by its children, retaining unranked/orphan rows.
+    function phoenixOrderOrganizationChoices_(data) {
+      var rows = (Array.isArray(data) ? data : []).map(function(org,index) { return {org:org,index:index}; });
+      var byId = new Map(), children = new Map(), visited = new Set(), result = [];
+      function id(row) { return String(row.org.ID || '').trim(); }
+      function parent(row) { return String(row.org.ParentID || '').trim(); }
+      function rank(row) {
+        var level = parseInt(row.org.CmdLevel,10);
+        return level >= 1 && level <= 5 ? level : 99;
+      }
+      function compare(a,b) { return rank(a)-rank(b) || a.index-b.index; }
+      rows.forEach(function(row) { if (id(row) && !byId.has(id(row))) byId.set(id(row),row); });
+      var roots = [];
+      rows.forEach(function(row) {
+        var p = parent(row);
+        if (!p || !byId.has(p) || p === id(row)) roots.push(row);
+        else {
+          var list = children.get(p) || [];
+          list.push(row); children.set(p,list);
+        }
+      });
+      children.forEach(function(list) { list.sort(compare); });
+      function visit(row) {
+        if (visited.has(row.index)) return;
+        visited.add(row.index); result.push(row.org);
+        (children.get(id(row)) || []).forEach(visit);
+      }
+      roots.sort(compare).forEach(visit);
+      // Broken/circular parent references must never hide an organization.
+      rows.slice().sort(compare).forEach(visit);
+      return result;
+    }
     // Shared personnel cache for every position presentation, keyed by both IDs.
-    let personnelDirectory = [], personnelPositions = [], personnelLoaded = false;
+    let personnelDirectory = [], personnelPositions = [], personnelOrganizations = [], personnelLoaded = false;
     let personnelLoadPromise = null, personnelReloadPending = false, personnelBusy = false, personnelRevision = 0;
     let allPositionsDashboard = [], positionDashboardLoading = false;
     function personnelKey(p) { return JSON.stringify([String(p.OrganizationID || ''), String(p.PositionID || '')]); }
@@ -1628,6 +1661,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
         if(revision !== personnelRevision) { personnelReloadPending=true;finish();return; }
         personnelDirectory = Array.isArray(data.personnel) ? data.personnel : [];
         personnelPositions = Array.isArray(data.positions) ? data.positions : [];
+        personnelOrganizations = phoenixOrderOrganizationChoices_(Array.isArray(data.organizations) ? data.organizations : allData);
         personnelLoaded = true;
         secPositions = personnelPositions.slice();
         secRefreshPersonnelPickers();
@@ -1652,7 +1686,14 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
       const current = preferredOrg === undefined ? select.value : String(preferredOrg);
       const orgs = new Map();
       personnelPositions.forEach(p => orgs.set(String(p.OrganizationID),p.OrganizationNameTH || p.OrganizationNameEN || p.OrganizationID));
-      select.innerHTML = '<option value="">-- เลือกหน่วยงาน --</option>'+[...orgs.entries()].sort((a,b)=>a[1].localeCompare(b[1],'th')).map(([id,name])=>'<option value="'+escapeHtml(id)+'">'+escapeHtml(name)+'</option>').join('');
+      const ordered = phoenixOrderOrganizationChoices_(personnelOrganizations.length ? personnelOrganizations : allData);
+      const entries = [], seen = new Set();
+      ordered.forEach(org => {
+        const id = String(org.ID);
+        if (orgs.has(id) && !seen.has(id)) { entries.push([id,orgs.get(id)]); seen.add(id); }
+      });
+      orgs.forEach((name,id) => { if(!seen.has(id))entries.push([id,name]); });
+      select.innerHTML = '<option value="">-- เลือกหน่วยงาน --</option>'+entries.map(([id,name])=>'<option value="'+escapeHtml(id)+'">'+escapeHtml(name)+'</option>').join('');
       select.value = orgs.has(current) ? current : '';
       renderPersonnelPositionOptions(preferredPosition);
       document.getElementById('personnelFormStatus').textContent = personnelPositions.length ? '' : 'ยังไม่มีตำแหน่ง กรุณาเพิ่มตำแหน่งในข้อมูลหน่วยงานก่อน';
@@ -1901,7 +1942,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
     function secLoadBudgetPage(){
       google.script.run
         .withSuccessHandler(function(d){
-          secOrgOptions=Array.isArray(d)?d:[];
+          secOrgOptions=phoenixOrderOrganizationChoices_(Array.isArray(d)?d:[]);
           secLoadBudgetUnits();
           secLoadCentralBudgets();
           secLoadEmergencyExpenses();
@@ -1982,7 +2023,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 
       google.script.run
         .withSuccessHandler(d=>{
-          secOrgOptions=Array.isArray(d)?d:[];
+          secOrgOptions=phoenixOrderOrganizationChoices_(Array.isArray(d)?d:[]);
           secRenderDashboard();
           if(document.querySelector('#sec-page-budget.active')) secRenderBudgets();
         })
@@ -4135,7 +4176,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 
       parentSelect.innerHTML = '<option value="">-- ไม่ระบุสังกัด / ขึ้นตรงกับระดับบริหาร --</option>';
       
-      allData.forEach(item => {
+      phoenixOrderOrganizationChoices_(allData).forEach(item => {
         if (item.ID === currentId) return;
 
         // "หน่วยงานย่อย" สามารถเลือกสังกัดได้ทั้ง "หน่วยงานหลัก" หรือ "ส่วนปฏิบัติการพิเศษ"
